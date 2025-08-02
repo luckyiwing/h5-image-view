@@ -1,0 +1,1457 @@
+/* 基础样式重置 */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background-color: #000;
+    color: #fff;
+    overflow: hidden;
+}
+
+#app {
+    width: 100vw;
+    height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    position: relative;
+}
+
+#image-container {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+#image-container img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+}
+
+/* 加载指示器样式 */
+#loading-indicator {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+}
+
+.spinner {
+    width: 40px;
+    height: 40px;
+    border: 4px solid #333;
+    border-top: 4px solid #fff;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin: 0 auto 10px;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* 错误提示样式 */
+#error-message {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+    background: rgba(255, 0, 0, 0.1);
+    padding: 20px;
+    border-radius: 8px;
+    border: 1px solid #ff4444;
+}
+
+#retry-btn {
+    margin-top: 10px;
+    padding: 8px 16px;
+    background: #fff;
+    color: #000;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+#retry-btn:hover {
+    background: #f0f0f0;
+}
+
+/* 用户反馈样式 */
+.user-feedback {
+    position: fixed;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0, 0, 0, 0.8);
+    color: #fff;
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-size: 14px;
+    z-index: 1000;
+    transition: opacity 0.3s ease, transform 0.3s ease;
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* 隐藏类 */
+.hidden {
+    display: none !important;
+}
+
+/* 设备特定样式 */
+.mobile-image {
+    max-width: calc(100vw - 20px) !important;
+    max-height: calc(100vh - 40px) !important;
+    touch-action: manipulation;
+}
+
+.tablet-image {
+    max-width: calc(100vw - 40px) !important;
+    max-height: calc(100vh - 60px) !important;
+}
+
+.desktop-image {
+    max-width: calc(100vw - 60px) !important;
+    max-height: calc(100vh - 80px) !important;
+}
+
+/* 方向特定样式 */
+.portrait-image {
+    object-fit: contain;
+    object-position: center;
+}
+
+.landscape-image {
+    object-fit: contain;
+    object-position: center;
+}
+
+/* 响应式设计 - 移动端 */
+@media (max-width: 768px) {
+    #image-container img {
+        width: 100%;
+        height: auto;
+        max-width: calc(100vw - 20px);
+        max-height: calc(100vh - 40px);
+    }
+    
+    .user-feedback {
+        top: 10px;
+        font-size: 12px;
+        padding: 6px 12px;
+    }
+
+    #loading-indicator {
+        font-size: 14px;
+    }
+
+    #error-message {
+        padding: 15px;
+        margin: 0 10px;
+        font-size: 14px;
+    }
+
+    #retry-btn {
+        padding: 10px 20px;
+        font-size: 14px;
+    }
+}
+
+/* 响应式设计 - 平板端 */
+@media (min-width: 769px) and (max-width: 1024px) {
+    #image-container img {
+        max-width: calc(100vw - 40px);
+        max-height: calc(100vh - 60px);
+    }
+
+    .user-feedback {
+        top: 15px;
+        font-size: 14px;
+        padding: 8px 16px;
+    }
+
+    #loading-indicator {
+        font-size: 16px;
+    }
+
+    #error-message {
+        padding: 20px;
+        font-size: 16px;
+    }
+}
+
+/* 响应式设计 - 桌面端 */
+@media (min-width: 1025px) {
+    #image-container img {
+        max-width: calc(100vw - 60px);
+        max-height: calc(100vh - 80px);
+    }
+
+    .user-feedback {
+        top: 20px;
+        font-size: 14px;
+    }
+
+    #loading-indicator {
+        font-size: 18px;
+    }
+
+    #error-message {
+        padding: 25px;
+        font-size: 16px;
+    }
+}
+
+/* 横屏特定样式 */
+@media (orientation: landscape) {
+    .landscape-image {
+        max-height: calc(100vh - 20px);
+    }
+
+    .user-feedback {
+        top: 10px;
+    }
+}
+
+/* 竖屏特定样式 */
+@media (orientation: portrait) {
+    .portrait-image {
+        max-width: calc(100vw - 20px);
+    }
+}
+
+/* 帮助按钮样式 */
+.help-button {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.1);
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    color: #fff;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    font-weight: bold;
+    transition: all 0.3s ease;
+    backdrop-filter: blur(10px);
+    z-index: 1000;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    /* 确保按钮可以接收触摸事件 */
+    pointer-events: auto;
+    /* 移动端触摸优化 */
+    touch-action: manipulation;
+}
+
+/* 网络诊断按钮样式 */
+.diagnostic-button {
+    position: fixed;
+    top: 20px;
+    right: 80px;
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    background: rgba(74, 144, 226, 0.2);
+    border: 2px solid rgba(74, 144, 226, 0.4);
+    color: #fff;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    font-weight: bold;
+    transition: all 0.3s ease;
+    backdrop-filter: blur(10px);
+    z-index: 1000;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    pointer-events: auto;
+    touch-action: manipulation;
+}
+
+.diagnostic-button:hover {
+    background: rgba(74, 144, 226, 0.3);
+    border-color: rgba(74, 144, 226, 0.6);
+    transform: scale(1.05);
+}
+
+.diagnostic-button:active {
+    transform: scale(0.95);
+}
+
+.diagnostic-button:focus {
+    outline: 2px solid #4A90E2;
+    outline-offset: 2px;
+}
+
+/* API切换按钮样式 */
+.api-switch-button {
+    position: fixed;
+    top: 20px;
+    right: 140px;
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    background: rgba(34, 197, 94, 0.2);
+    border: 2px solid rgba(34, 197, 94, 0.4);
+    color: #fff;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    font-weight: bold;
+    transition: all 0.3s ease;
+    backdrop-filter: blur(10px);
+    z-index: 1000;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    pointer-events: auto;
+    touch-action: manipulation;
+}
+
+.api-switch-button:hover {
+    background: rgba(34, 197, 94, 0.3);
+    border-color: rgba(34, 197, 94, 0.6);
+}
+
+.api-switch-button:active {
+    transform: scale(0.95);
+}
+
+.api-switch-button:focus {
+    outline: 2px solid #22C55E;
+    outline-offset: 2px;
+}
+
+.api-switch-button .api-icon {
+    font-size: 16px;
+    margin-bottom: 2px;
+}
+
+.api-switch-button .api-text {
+    font-size: 8px;
+    font-weight: 500;
+    line-height: 1;
+}
+
+.diagnostic-icon {
+    font-size: 20px;
+    line-height: 1;
+    margin-bottom: 2px;
+}
+
+.diagnostic-text {
+    font-size: 10px;
+    font-weight: normal;
+    opacity: 0.8;
+    line-height: 1;
+}
+
+.help-button:hover {
+    background: rgba(255, 255, 255, 0.2);
+    border-color: rgba(255, 255, 255, 0.4);
+    transform: scale(1.05);
+}
+
+.help-button:active {
+    transform: scale(0.95);
+}
+
+.help-button:focus {
+    outline: 2px solid #4A90E2;
+    outline-offset: 2px;
+}
+
+.help-icon {
+    font-size: 20px;
+    line-height: 1;
+    margin-bottom: 2px;
+}
+
+.help-text {
+    font-size: 10px;
+    font-weight: normal;
+    opacity: 0.8;
+    line-height: 1;
+}
+
+/* 移动端按钮样式 */
+@media (max-width: 768px) {
+    .help-button {
+        top: 15px;
+        right: 15px;
+        width: 50px;
+        height: 50px;
+        /* 增加触摸区域 */
+        min-width: 44px;
+        min-height: 44px;
+        /* 确保按钮在移动端更容易点击 */
+        padding: 8px;
+        /* 移动端特定的背景色，提高可见性 */
+        background: rgba(255, 255, 255, 0.15);
+        border: 2px solid rgba(255, 255, 255, 0.3);
+    }
+    
+    .diagnostic-button {
+        top: 15px;
+        right: 75px;
+        width: 50px;
+        height: 50px;
+        min-width: 44px;
+        min-height: 44px;
+        padding: 8px;
+        background: rgba(74, 144, 226, 0.25);
+        border: 2px solid rgba(74, 144, 226, 0.5);
+    }
+    
+    .api-switch-button {
+        top: 15px;
+        right: 135px;
+        width: 50px;
+        height: 50px;
+        min-width: 44px;
+        min-height: 44px;
+        padding: 8px;
+        background: rgba(34, 197, 94, 0.25);
+        border: 2px solid rgba(34, 197, 94, 0.5);
+    }
+    
+    .help-icon, .diagnostic-icon {
+        font-size: 18px;
+    }
+    
+    .help-text, .diagnostic-text {
+        font-size: 9px;
+    }
+}
+
+/* 平板端帮助按钮样式 */
+@media (min-width: 769px) and (max-width: 1024px) {
+    .help-button {
+        top: 18px;
+        right: 18px;
+        width: 48px;
+        height: 48px;
+    }
+    
+    .help-icon {
+        font-size: 19px;
+    }
+    
+    .help-text {
+        font-size: 9px;
+    }
+}
+
+/* 触摸设备优化 */
+@media (hover: none) and (pointer: coarse) {
+    .help-button {
+        width: 55px;
+        height: 55px;
+        /* 确保触摸区域足够大 */
+        min-width: 44px;
+        min-height: 44px;
+        /* 移除可能干扰触摸的样式 */
+        backdrop-filter: none;
+        /* 确保按钮在触摸设备上可见 */
+        background: rgba(255, 255, 255, 0.2);
+        border: 2px solid rgba(255, 255, 255, 0.4);
+    }
+    
+    .help-button:hover {
+        transform: none;
+    }
+    
+    .help-button:active {
+        background: rgba(255, 255, 255, 0.4) !important;
+        transform: scale(0.95) !important;
+        transition: all 0.1s ease !important;
+    }
+}
+
+/* 高对比度模式支持 */
+@media (prefers-contrast: high) {
+    .help-button {
+        background: rgba(255, 255, 255, 0.9);
+        color: #000;
+        border-color: #fff;
+    }
+    
+    .help-button:hover {
+        background: #fff;
+    }
+}
+
+/* 减少动画模式支持 */
+@media (prefers-reduced-motion: reduce) {
+    .help-button {
+        transition: none;
+    }
+    
+    .help-button:hover {
+        transform: none;
+    }
+    
+    .help-button:active {
+        transform: none;
+    }
+}
+
+/* 屏幕阅读器专用样式 */
+.sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+
+/* 用户引导覆盖层样式 */
+.guide-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 9999;
+    visibility: hidden;
+    opacity: 0;
+    transition: opacity 0.3s ease, visibility 0.3s ease;
+    /* 防止滚动穿透 */
+    overscroll-behavior: contain;
+    /* 确保覆盖层在所有内容之上 */
+    isolation: isolate;
+}
+
+.guide-backdrop {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.8);
+    backdrop-filter: blur(10px);
+}
+
+.guide-content {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: rgba(20, 20, 20, 0.95);
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(20px);
+    max-width: 500px;
+    width: 90%;
+    max-height: 80vh;
+    overflow-y: auto;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+}
+
+.guide-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 24px 16px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.guide-title {
+    font-size: 20px;
+    font-weight: 600;
+    color: #fff;
+    margin: 0;
+}
+
+.guide-close {
+    background: none;
+    border: none;
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 24px;
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 4px;
+    transition: all 0.2s ease;
+    line-height: 1;
+}
+
+.guide-close:hover {
+    color: #fff;
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.guide-body {
+    padding: 20px 24px;
+}
+
+.guide-subtitle {
+    color: rgba(255, 255, 255, 0.8);
+    font-size: 14px;
+    margin: 0 0 20px 0;
+    text-align: center;
+}
+
+.guide-instructions {
+    margin-bottom: 20px;
+}
+
+.guide-instruction {
+    display: flex;
+    align-items: flex-start;
+    margin-bottom: 16px;
+    padding: 12px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.instruction-icon {
+    font-size: 24px;
+    margin-right: 12px;
+    flex-shrink: 0;
+    line-height: 1;
+}
+
+.instruction-content {
+    flex: 1;
+}
+
+.instruction-action {
+    font-size: 16px;
+    font-weight: 600;
+    color: #fff;
+    margin: 0 0 4px 0;
+}
+
+.instruction-description {
+    font-size: 14px;
+    color: rgba(255, 255, 255, 0.8);
+    margin: 0;
+    line-height: 1.4;
+}
+
+.guide-tips {
+    background: rgba(74, 144, 226, 0.1);
+    border: 1px solid rgba(74, 144, 226, 0.3);
+    border-radius: 8px;
+    padding: 16px;
+    margin-top: 16px;
+}
+
+.tips-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: #4A90E2;
+    margin: 0 0 8px 0;
+}
+
+.tips-list {
+    margin: 0;
+    padding-left: 16px;
+    color: rgba(92, 89, 89, 0.8);
+}
+
+.tips-list li {
+    font-size: 13px;
+    line-height: 1.4;
+    margin-bottom: 4px;
+}
+
+.guide-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 24px 20px;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.guide-checkbox {
+    display: flex;
+    align-items: center;
+    font-size: 14px;
+    color: rgba(255, 255, 255, 0.8);
+    cursor: pointer;
+    user-select: none;
+}
+
+.guide-checkbox input {
+    margin-right: 8px;
+    accent-color: #4A90E2;
+}
+
+.guide-got-it {
+    background: #4A90E2;
+    color: #fff;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.guide-got-it:hover {
+    background: #357ABD;
+    transform: translateY(-1px);
+}
+
+.guide-got-it:active {
+    transform: translateY(0);
+}
+
+/* 移动端引导样式优化 */
+@media (max-width: 768px) {
+    .guide-content {
+        width: 95%;
+        max-height: 85vh;
+    }
+    
+    .guide-header {
+        padding: 16px 20px 12px;
+    }
+    
+    .guide-title {
+        font-size: 18px;
+    }
+    
+    .guide-body {
+        padding: 16px 20px;
+    }
+    
+    .guide-instruction {
+        padding: 10px;
+        margin-bottom: 12px;
+    }
+    
+    .instruction-icon {
+        font-size: 20px;
+        margin-right: 10px;
+    }
+    
+    .instruction-action {
+        font-size: 15px;
+    }
+    
+    .instruction-description {
+        font-size: 13px;
+    }
+    
+    .guide-footer {
+        padding: 12px 20px 16px;
+        flex-direction: column;
+        gap: 12px;
+    }
+    
+    .guide-got-it {
+        width: 100%;
+        padding: 12px;
+    }
+}
+
+/* 平板端引导样式优化 */
+@media (min-width: 769px) and (max-width: 1024px) {
+    .guide-content {
+        max-width: 600px;
+    }
+    
+    .instruction-icon {
+        font-size: 26px;
+    }
+    
+    .instruction-action {
+        font-size: 17px;
+    }
+    
+    .instruction-description {
+        font-size: 15px;
+    }
+}
+
+/* 高对比度模式支持 */
+@media (prefers-contrast: high) {
+    .guide-content {
+        background: rgba(0, 0, 0, 0.95);
+        border-color: #fff;
+    }
+    
+    .guide-instruction {
+        background: rgba(255, 255, 255, 0.1);
+        border-color: rgba(255, 255, 255, 0.3);
+    }
+    
+    .guide-tips {
+        background: rgba(74, 144, 226, 0.2);
+        border-color: #4A90E2;
+    }
+}
+
+/* 减少动画模式支持 */
+@media (prefers-reduced-motion: reduce) {
+    .guide-overlay {
+        transition: none;
+    }
+    
+    .guide-close,
+    .guide-got-it {
+        transition: none;
+    }
+    
+    .guide-got-it:hover {
+        transform: none;
+    }
+}
+
+/* 动画增强样式 */
+@keyframes slideInFromBottom {
+    0% {
+        transform: translate(-50%, -50%) translateY(20px);
+        opacity: 0;
+    }
+    100% {
+        transform: translate(-50%, -50%) translateY(0);
+        opacity: 1;
+    }
+}
+
+@keyframes slideInFromTop {
+    0% {
+        transform: translate(-50%, -50%) translateY(-20px);
+        opacity: 0;
+    }
+    100% {
+        transform: translate(-50%, -50%) translateY(0);
+        opacity: 1;
+    }
+}
+
+@keyframes fadeInScale {
+    0% {
+        transform: translate(-50%, -50%) scale(0.9);
+        opacity: 0;
+    }
+    100% {
+        transform: translate(-50%, -50%) scale(1);
+        opacity: 1;
+    }
+}
+
+@keyframes pulse {
+    0%, 100% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(1.05);
+    }
+}
+
+/* 引导内容动画 */
+.guide-content {
+    animation: fadeInScale 0.3s ease-out;
+}
+
+.guide-instruction {
+    transition: all 0.2s ease;
+}
+
+.guide-instruction:hover {
+    background: rgba(255, 255, 255, 0.08);
+    transform: translateX(4px);
+}
+
+/* 焦点管理和键盘导航 */
+.guide-overlay *:focus {
+    outline: 2px solid #4A90E2;
+    outline-offset: 2px;
+    border-radius: 4px;
+}
+
+.guide-close:focus,
+.guide-got-it:focus {
+    outline-color: #fff;
+}
+
+/* 超大屏幕优化 */
+@media (min-width: 1440px) {
+    .guide-content {
+        max-width: 600px;
+    }
+    
+    .guide-title {
+        font-size: 22px;
+    }
+    
+    .instruction-action {
+        font-size: 18px;
+    }
+    
+    .instruction-description {
+        font-size: 16px;
+    }
+}
+
+/* 超小屏幕优化 */
+@media (max-width: 480px) {
+    .guide-content {
+        width: 98%;
+        max-height: 90vh;
+        border-radius: 8px;
+    }
+    
+    .guide-header {
+        padding: 12px 16px 8px;
+    }
+    
+    .guide-title {
+        font-size: 16px;
+    }
+    
+    .guide-body {
+        padding: 12px 16px;
+    }
+    
+    .guide-instruction {
+        padding: 8px;
+        margin-bottom: 8px;
+    }
+    
+    .instruction-icon {
+        font-size: 18px;
+        margin-right: 8px;
+    }
+    
+    .instruction-action {
+        font-size: 14px;
+    }
+    
+    .instruction-description {
+        font-size: 12px;
+    }
+    
+    .guide-footer {
+        padding: 8px 16px 12px;
+    }
+    
+    .guide-got-it {
+        padding: 10px;
+        font-size: 13px;
+    }
+}
+
+/* 横屏手机优化 */
+@media (max-width: 768px) and (orientation: landscape) {
+    .guide-content {
+        max-height: 95vh;
+        width: 85%;
+    }
+    
+    .guide-header {
+        padding: 10px 20px 8px;
+    }
+    
+    .guide-body {
+        padding: 10px 20px;
+    }
+    
+    .guide-footer {
+        padding: 8px 20px 10px;
+    }
+}
+
+/* 暗色主题增强 */
+@media (prefers-color-scheme: dark) {
+    .guide-content {
+        background: rgba(15, 15, 15, 0.98);
+        border-color: rgba(255, 255, 255, 0.15);
+    }
+    
+    .guide-instruction {
+        background: rgba(255, 255, 255, 0.03);
+        border-color: rgba(255, 255, 255, 0.08);
+    }
+    
+    .guide-instruction:hover {
+        background: rgba(255, 255, 255, 0.06);
+    }
+}
+
+/* 亮色主题支持 */
+@media (prefers-color-scheme: light) {
+    .guide-content {
+        background: rgba(255, 255, 255, 0.95);
+        color: #333;
+        border-color: rgba(0, 0, 0, 0.1);
+    }
+    
+    .guide-title,
+    .instruction-action {
+        color: #333;
+    }
+    
+    .guide-subtitle,
+    .instruction-description {
+        color: rgba(0, 0, 0, 0.7);
+    }
+    
+    .guide-instruction {
+        background: rgba(0, 0, 0, 0.03);
+        border-color: rgba(0, 0, 0, 0.08);
+    }
+    
+    .guide-instruction:hover {
+        background: rgba(0, 0, 0, 0.06);
+    }
+    
+    .guide-close {
+        color: rgba(0, 0, 0, 0.7);
+    }
+    
+    .guide-close:hover {
+        color: #333;
+        background: rgba(0, 0, 0, 0.1);
+    }
+    
+    .guide-checkbox {
+        color: rgba(0, 0, 0, 0.8);
+    }
+}
+
+/* 打印样式 */
+@media print {
+    .guide-overlay {
+        display: none !important;
+    }
+    
+    .help-button {
+        display: none !important;
+    }
+}
+
+/* 无障碍增强 */
+@media (prefers-reduced-transparency) {
+    .guide-backdrop {
+        backdrop-filter: none;
+        background: rgba(0, 0, 0, 0.9);
+    }
+    
+    .guide-content {
+        backdrop-filter: none;
+        background: rgba(20, 20, 20, 1);
+    }
+    
+    .help-button {
+        backdrop-filter: none;
+        background: rgba(255, 255, 255, 0.2);
+    }
+}
+
+/* 强制颜色模式支持 */
+@media (forced-colors: active) {
+    .guide-content {
+        background: Canvas;
+        color: CanvasText;
+        border: 1px solid ButtonBorder;
+    }
+    
+    .guide-instruction {
+        background: Field;
+        border: 1px solid ButtonBorder;
+    }
+    
+    .guide-got-it {
+        background: ButtonFace;
+        color: ButtonText;
+        border: 1px solid ButtonBorder;
+    }
+    
+    .guide-close {
+        color: ButtonText;
+    }
+    
+    .help-button {
+        background: ButtonFace;
+        color: ButtonText;
+        border: 2px solid ButtonBorder;
+    }
+}
+
+/* 触摸设备特定优化 */
+@media (pointer: coarse) {
+    .guide-instruction {
+        padding: 16px;
+        margin-bottom: 16px;
+    }
+    
+    .guide-close {
+        padding: 8px;
+        font-size: 28px;
+    }
+    
+    .guide-got-it {
+        padding: 14px 24px;
+        font-size: 16px;
+    }
+    
+    .guide-checkbox {
+        padding: 8px 0;
+    }
+    
+    .guide-checkbox input {
+        width: 18px;
+        height: 18px;
+        margin-right: 12px;
+    }
+}
+
+/* 精确指针设备优化 */
+@media (pointer: fine) {
+    .guide-instruction:hover {
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+    
+    .guide-close:hover {
+        transform: scale(1.1);
+    }
+    
+    .guide-got-it:hover {
+        box-shadow: 0 4px 12px rgba(74, 144, 226, 0.3);
+    }
+}
+
+/* 容器查询支持（现代浏览器） */
+@container (max-width: 400px) {
+    .guide-content {
+        border-radius: 6px;
+    }
+    
+    .guide-instruction {
+        flex-direction: column;
+        text-align: center;
+    }
+    
+    .instruction-icon {
+        margin-right: 0;
+        margin-bottom: 8px;
+    }
+}
+
+/* 高分辨率屏幕优化 */
+@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+    .spinner {
+        border-width: 2px;
+    }
+
+    .user-feedback {
+        backdrop-filter: blur(20px);
+    }
+    
+    .help-button {
+        backdrop-filter: blur(20px);
+    }
+    
+    .guide-backdrop {
+        backdrop-filter: blur(20px);
+    }
+    
+    .guide-content {
+        backdrop-filter: blur(30px);
+        box-shadow: 0 25px 50px rgba(0, 0, 0, 0.6);
+    }
+    
+    .guide-instruction {
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    }
+}
+
+/* 性能优化 */
+.guide-overlay,
+.guide-content,
+.guide-instruction {
+    will-change: transform, opacity;
+}
+
+/* 动画完成后清理 */
+.guide-overlay.animation-complete {
+    will-change: auto;
+}
+
+.guide-overlay.animation-complete .guide-content,
+.guide-overlay.animation-complete .guide-instruction {
+    will-change: auto;
+}
+
+/* 动态视口单位支持 */
+@supports (height: 100dvh) {
+    #app {
+        height: 100dvh;
+    }
+    
+    .guide-content {
+        max-height: 80dvh;
+    }
+    
+    @media (max-width: 768px) {
+        .guide-content {
+            max-height: 85dvh;
+        }
+    }
+    
+    @media (max-width: 480px) {
+        .guide-content {
+            max-height: 90dvh;
+        }
+    }
+}
+
+/* CSS Grid 支持的布局增强 */
+@supports (display: grid) {
+    .guide-instructions {
+        display: grid;
+        gap: 16px;
+        grid-template-columns: 1fr;
+    }
+    
+    @media (min-width: 769px) {
+        .guide-instructions {
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        }
+    }
+}
+
+/* Flexbox Gap 支持 */
+@supports (gap: 1rem) {
+    .guide-footer {
+        gap: 16px;
+    }
+    
+    @media (max-width: 768px) {
+        .guide-footer {
+            gap: 12px;
+        }
+    }
+}
+
+/* 现代滚动条样式 */
+.guide-content::-webkit-scrollbar {
+    width: 8px;
+}
+
+.guide-content::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 4px;
+}
+
+.guide-content::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 4px;
+}
+
+.guide-content::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.3);
+}
+
+/* Firefox 滚动条样式 */
+.guide-content {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.2) rgba(255, 255, 255, 0.05);
+}
+
+/* 可变字体支持 */
+@supports (font-variation-settings: normal) {
+    .guide-title {
+        font-variation-settings: "wght" 600;
+    }
+    
+    .instruction-action {
+        font-variation-settings: "wght" 600;
+    }
+}
+
+/* 逻辑属性支持 */
+@supports (margin-inline-start: 0) {
+    .instruction-icon {
+        margin-inline-end: 12px;
+        margin-inline-start: 0;
+    }
+    
+    .guide-checkbox input {
+        margin-inline-end: 8px;
+        margin-inline-start: 0;
+    }
+    
+    .tips-list {
+        padding-inline-start: 16px;
+    }
+}
+
+/* 色彩空间支持 */
+@supports (color: color(display-p3 1 0 0)) {
+    @media (color-gamut: p3) {
+        .guide-got-it {
+            background: color(display-p3 0.29 0.56 0.89);
+        }
+        
+        .guide-got-it:hover {
+            background: color(display-p3 0.21 0.48 0.74);
+        }
+        
+        .tips-title {
+            color: color(display-p3 0.29 0.56 0.89);
+        }
+    }
+}
+
+/* 环境变量支持（安全区域） */
+@supports (padding: max(0px, env(safe-area-inset-top))) {
+    .guide-content {
+        padding-top: max(20px, env(safe-area-inset-top));
+        padding-bottom: max(20px, env(safe-area-inset-bottom));
+        padding-left: max(24px, env(safe-area-inset-left));
+        padding-right: max(24px, env(safe-area-inset-right));
+    }
+    
+    .help-button {
+        top: max(20px, env(safe-area-inset-top) + 10px);
+        right: max(20px, env(safe-area-inset-right) + 10px);
+    }
+    
+    @media (max-width: 768px) {
+        .help-button {
+            top: max(15px, env(safe-area-inset-top) + 5px);
+            right: max(15px, env(safe-area-inset-right) + 5px);
+        }
+    }
+}
+
+/* 折叠屏设备支持 */
+@media (screen-spanning: single-fold-vertical) {
+    .guide-content {
+        max-width: 45vw;
+        margin-right: 5vw;
+    }
+}
+
+@media (screen-spanning: single-fold-horizontal) {
+    .guide-content {
+        max-height: 40vh;
+        margin-bottom: 5vh;
+    }
+}
+
+/* 悬停能力检测 */
+@media (hover: hover) {
+    .guide-instruction {
+        cursor: pointer;
+    }
+    
+    .guide-instruction:hover .instruction-icon {
+        animation: pulse 1s ease-in-out;
+    }
+}
+
+/* 焦点可见性增强 */
+@supports selector(:focus-visible) {
+    .guide-overlay *:focus {
+        outline: none;
+    }
+    
+    .guide-overlay *:focus-visible {
+        outline: 2px solid #4A90E2;
+        outline-offset: 2px;
+        border-radius: 4px;
+    }
+}
+
+/* 用户偏好：减少数据使用 */
+@media (prefers-reduced-data: reduce) {
+    .guide-backdrop {
+        backdrop-filter: none;
+    }
+    
+    .guide-content {
+        backdrop-filter: none;
+        box-shadow: none;
+    }
+    
+    .help-button {
+        backdrop-filter: none;
+    }
+}
+
+/* 响应式字体大小 */
+@supports (font-size: clamp(1rem, 2.5vw, 2rem)) {
+    .guide-title {
+        font-size: clamp(16px, 4vw, 22px);
+    }
+    
+    .instruction-action {
+        font-size: clamp(14px, 3vw, 18px);
+    }
+    
+    .instruction-description {
+        font-size: clamp(12px, 2.5vw, 16px);
+    }
+}
+
+/* 现代CSS重置增强 */
+@supports (scrollbar-gutter: stable) {
+    .guide-content {
+        scrollbar-gutter: stable;
+    }
+}
+
+/* 容器查询增强 */
+@supports (container-type: inline-size) {
+    .guide-content {
+        container-type: inline-size;
+    }
+    
+    @container (max-width: 400px) {
+        .guide-header {
+            flex-direction: column;
+            gap: 10px;
+            text-align: center;
+        }
+        
+        .guide-close {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+        }
+    }
+    
+    @container (min-width: 600px) {
+        .guide-instructions {
+            columns: 2;
+            column-gap: 20px;
+        }
+        
+        .guide-instruction {
+            break-inside: avoid;
+        }
+    }
+}

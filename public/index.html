@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>H5 图片展示器</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div id="app">
+      <div id="image-container">
+        <!-- 图片将在这里显示 -->
+      </div>
+      <div id="loading-indicator" class="hidden">
+        <div class="spinner"></div>
+        <p>加载中...</p>
+      </div>
+      <div id="error-message" class="hidden">
+        <p>图片加载失败</p>
+        <button id="retry-btn">重试</button>
+      </div>
+
+      <!-- 帮助按钮 -->
+      <button
+        id="help-button"
+        class="help-button"
+        title="显示操作指南 (F1)"
+        aria-label="显示操作指南"
+        aria-describedby="help-description"
+        role="button"
+        tabindex="0"
+        onclick="if(window.imageViewerApp && window.imageViewerApp.state && window.imageViewerApp.state.modules && window.imageViewerApp.state.modules.imageViewer) { window.imageViewerApp.state.modules.imageViewer.handleHelpButtonClick(); } else { alert('帮助功能正在加载中，请稍后重试'); }"
+        ontouchstart="this.style.transform='scale(0.95)'; this.style.background='rgba(255,255,255,0.25)';"
+        ontouchend="this.style.transform='scale(1)'; this.style.background='';"
+      >
+        <span class="help-icon" aria-hidden="true">?</span>
+        <span class="help-text" aria-hidden="true">帮助</span>
+      </button>
+
+      <!-- 网络诊断按钮 -->
+      <button
+        id="diagnostic-button"
+        class="diagnostic-button"
+        title="网络诊断 (Ctrl+D)"
+        aria-label="运行网络诊断"
+        role="button"
+        tabindex="0"
+        onclick="window.runNetworkDiagnosis()"
+        ontouchstart="this.style.transform='scale(0.95)'; this.style.background='rgba(255,255,255,0.25)';"
+        ontouchend="this.style.transform='scale(1)'; this.style.background='';"
+      >
+        <span class="diagnostic-icon" aria-hidden="true">🔍</span>
+        <span class="diagnostic-text" aria-hidden="true">诊断</span>
+      </button>
+
+      <!-- API切换按钮 -->
+      <button
+        id="api-switch-button"
+        class="api-switch-button"
+        title="切换图片API源"
+        aria-label="切换图片API源"
+        role="button"
+        tabindex="0"
+        onclick="window.switchApiSource()"
+        ontouchstart="this.style.transform='scale(0.95)'; this.style.background='rgba(255,255,255,0.25)';"
+        ontouchend="this.style.transform='scale(1)'; this.style.background='';"
+      >
+        <span class="api-icon" aria-hidden="true">🔄</span>
+        <span class="api-text" aria-hidden="true">新API</span>
+      </button>
+
+      <!-- 隐藏的描述文本，用于屏幕阅读器 -->
+      <div id="help-description" class="sr-only">
+        按下此按钮或使用F1键可显示图片浏览器的操作指南，包括如何使用鼠标、键盘或触摸手势来切换图片
+      </div>
+    </div>
+    <script src="browser-compatibility.js"></script>
+    <script src="performance-cache.js"></script>
+    <script src="responsive-manager.js"></script>
+    <script src="local-storage-manager.js"></script>
+    <script src="guide-content-config.js"></script>
+    <script src="guide-error-handlers.js"></script>
+    <script src="user-guide-manager.js"></script>
+    <script src="animation-controller.js"></script>
+    <script src="guide-integration-test.js"></script>
+    <script src="network-diagnostic.js"></script>
+    <script src="app.js"></script>
+    <script src="test-functionality.js"></script>
+  </body>
+</html>
