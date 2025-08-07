@@ -230,102 +230,111 @@ body {
     }
 }
 
-/* 帮助按钮样式 */
-.help-button {
+/* 按钮容器 - 使用flex布局 */
+.button-container {
     position: fixed;
     top: 20px;
     right: 20px;
+    display: flex;
+    flex-direction: row; /* 从左到右排列，按HTML顺序 */
+    align-items: center;
+    gap: 10px; /* 按钮之间的间距 */
+    z-index: 1000;
+    pointer-events: none; /* 容器本身不接收事件 */
+}
+
+/* 通用按钮样式 */
+.action-button {
     width: 50px;
     height: 50px;
     border-radius: 50%;
+    color: #fff;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    font-weight: bold;
+    transition: all 0.3s ease;
+    backdrop-filter: blur(10px);
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    pointer-events: auto; /* 按钮本身接收事件 */
+    touch-action: manipulation;
+    border: 2px solid;
+}
+
+/* 帮助按钮样式 */
+.help-button {
     background: rgba(255, 255, 255, 0.1);
-    border: 2px solid rgba(255, 255, 255, 0.2);
-    color: #fff;
-    cursor: pointer;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    font-size: 18px;
-    font-weight: bold;
-    transition: all 0.3s ease;
-    backdrop-filter: blur(10px);
-    z-index: 1000;
-    user-select: none;
-    -webkit-tap-highlight-color: transparent;
-    /* 确保按钮可以接收触摸事件 */
-    pointer-events: auto;
-    /* 移动端触摸优化 */
-    touch-action: manipulation;
-}
-
-/* 网络诊断按钮样式 */
-.diagnostic-button {
-    position: fixed;
-    top: 20px;
-    right: 80px;
-    width: 50px;
-    height: 50px;
-    border-radius: 50%;
-    background: rgba(74, 144, 226, 0.2);
-    border: 2px solid rgba(74, 144, 226, 0.4);
-    color: #fff;
-    cursor: pointer;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    font-size: 18px;
-    font-weight: bold;
-    transition: all 0.3s ease;
-    backdrop-filter: blur(10px);
-    z-index: 1000;
-    user-select: none;
-    -webkit-tap-highlight-color: transparent;
-    pointer-events: auto;
-    touch-action: manipulation;
-}
-
-.diagnostic-button:hover {
-    background: rgba(74, 144, 226, 0.3);
-    border-color: rgba(74, 144, 226, 0.6);
-    transform: scale(1.05);
-}
-
-.diagnostic-button:active {
-    transform: scale(0.95);
-}
-
-.diagnostic-button:focus {
-    outline: 2px solid #4A90E2;
-    outline-offset: 2px;
+    border-color: rgba(255, 255, 255, 0.2);
 }
 
 /* API切换按钮样式 */
 .api-switch-button {
-    position: fixed;
-    top: 20px;
-    right: 140px;
-    width: 50px;
-    height: 50px;
-    border-radius: 50%;
     background: rgba(34, 197, 94, 0.2);
-    border: 2px solid rgba(34, 197, 94, 0.4);
-    color: #fff;
-    cursor: pointer;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    font-size: 18px;
-    font-weight: bold;
-    transition: all 0.3s ease;
-    backdrop-filter: blur(10px);
-    z-index: 1000;
-    user-select: none;
-    -webkit-tap-highlight-color: transparent;
-    pointer-events: auto;
-    touch-action: manipulation;
+    border-color: rgba(34, 197, 94, 0.4);
+}
+
+/* 自定义API按钮样式 */
+.custom-api-button {
+    background: rgba(168, 85, 247, 0.2);
+    border-color: rgba(168, 85, 247, 0.4);
+}
+
+/* 按钮hover效果 */
+.help-button:hover {
+    background: rgba(255, 255, 255, 0.2);
+    border-color: rgba(255, 255, 255, 0.4);
+    transform: scale(1.05);
+}
+
+.api-switch-button:hover {
+    background: rgba(34, 197, 94, 0.3);
+    border-color: rgba(34, 197, 94, 0.6);
+    transform: scale(1.05);
+}
+
+.custom-api-button:hover {
+    background: rgba(168, 85, 247, 0.3);
+    border-color: rgba(168, 85, 247, 0.6);
+    transform: scale(1.05);
+}
+
+/* 按钮active效果 */
+.action-button:active {
+    transform: scale(0.95);
+}
+
+/* 按钮focus效果 */
+.help-button:focus {
+    outline: 2px solid #4A90E2;
+    outline-offset: 2px;
+}
+
+.api-switch-button:focus {
+    outline: 2px solid #22C55E;
+    outline-offset: 2px;
+}
+
+.custom-api-button:focus {
+    outline: 2px solid #A855F7;
+    outline-offset: 2px;
+}
+
+/* 按钮图标和文字样式 */
+.button-icon {
+    font-size: 16px;
+    margin-bottom: 2px;
+    line-height: 1;
+}
+
+.button-text {
+    font-size: 8px;
+    font-weight: 500;
+    line-height: 1;
+    opacity: 0.8;
 }
 
 .api-switch-button:hover {
@@ -394,71 +403,66 @@ body {
     line-height: 1;
 }
 
-/* 移动端按钮样式 */
+/* 移动端按钮容器和按钮样式 */
 @media (max-width: 768px) {
-    .help-button {
+    .button-container {
         top: 15px;
         right: 15px;
-        width: 50px;
-        height: 50px;
-        /* 增加触摸区域 */
-        min-width: 44px;
-        min-height: 44px;
-        /* 确保按钮在移动端更容易点击 */
-        padding: 8px;
-        /* 移动端特定的背景色，提高可见性 */
-        background: rgba(255, 255, 255, 0.15);
-        border: 2px solid rgba(255, 255, 255, 0.3);
+        gap: 8px; /* 移动端更紧凑的间距 */
     }
     
-    .diagnostic-button {
-        top: 15px;
-        right: 75px;
+    .action-button {
         width: 50px;
         height: 50px;
-        min-width: 44px;
+        min-width: 44px; /* 确保触摸区域足够大 */
         min-height: 44px;
         padding: 8px;
-        background: rgba(74, 144, 226, 0.25);
-        border: 2px solid rgba(74, 144, 226, 0.5);
+    }
+    
+    /* 移动端按钮背景增强 */
+    .help-button {
+        background: rgba(255, 255, 255, 0.15);
+        border-color: rgba(255, 255, 255, 0.3);
     }
     
     .api-switch-button {
-        top: 15px;
-        right: 135px;
-        width: 50px;
-        height: 50px;
-        min-width: 44px;
-        min-height: 44px;
-        padding: 8px;
         background: rgba(34, 197, 94, 0.25);
-        border: 2px solid rgba(34, 197, 94, 0.5);
+        border-color: rgba(34, 197, 94, 0.5);
     }
     
-    .help-icon, .diagnostic-icon {
+    .custom-api-button {
+        background: rgba(168, 85, 247, 0.25);
+        border-color: rgba(168, 85, 247, 0.5);
+    }
+    
+    .button-icon {
         font-size: 18px;
     }
     
-    .help-text, .diagnostic-text {
+    .button-text {
         font-size: 9px;
     }
 }
 
-/* 平板端帮助按钮样式 */
+/* 平板端按钮样式 */
 @media (min-width: 769px) and (max-width: 1024px) {
-    .help-button {
+    .button-container {
         top: 18px;
         right: 18px;
+        gap: 9px;
+    }
+    
+    .action-button {
         width: 48px;
         height: 48px;
     }
     
-    .help-icon {
-        font-size: 19px;
+    .button-icon {
+        font-size: 15px;
     }
     
-    .help-text {
-        font-size: 9px;
+    .button-text {
+        font-size: 7px;
     }
 }
 
@@ -1454,4 +1458,831 @@ body {
             break-inside: avoid;
         }
     }
+}
+.custom-api-button:hover {
+    background: rgba(168, 85, 247, 0.3);
+    border-color: rgba(168, 85, 247, 0.6);
+    transform: scale(1.05);
+}
+
+.custom-api-button:active {
+    transform: scale(0.95);
+}
+
+.custom-api-button:focus {
+    outline: 2px solid #A855F7;
+    outline-offset: 2px;
+}
+
+.custom-api-button .custom-icon {
+    font-size: 16px;
+    margin-bottom: 2px;
+}
+
+.custom-api-button .custom-text {
+    font-size: 8px;
+    font-weight: 500;
+    line-height: 1;
+}px;
+}
+
+.custom-api-button .custom-icon {
+    font-size: 16px;
+    margin-bottom: 2px;
+}
+
+.custom-api-button .custom-text {
+    font-size: 8px;
+    font-weight: 500;
+    line-height: 1;
+}
+
+/* 自定义API弹窗样式 */
+.custom-api-dialog {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 10000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    visibility: visible;
+    opacity: 1;
+    transition: opacity 0.3s ease, visibility 0.3s ease;
+}
+
+.custom-api-dialog.hidden {
+    visibility: hidden;
+    opacity: 0;
+}
+
+.dialog-backdrop {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.8);
+    backdrop-filter: blur(10px);
+}
+
+.dialog-content {
+    position: relative;
+    background: rgba(20, 20, 20, 0.95);
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(20px);
+    max-width: 500px;
+    width: 90%;
+    max-height: 80vh;
+    overflow-y: auto;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+    animation: fadeInScale 0.3s ease-out;
+}
+
+.dialog-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 24px 16px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.dialog-title {
+    font-size: 20px;
+    font-weight: 600;
+    color: #fff;
+    margin: 0;
+}
+
+.dialog-close {
+    background: none;
+    border: none;
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 24px;
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 4px;
+    transition: all 0.2s ease;
+    line-height: 1;
+}
+
+.dialog-close:hover {
+    color: #fff;
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.dialog-body {
+    padding: 20px 24px;
+}
+
+.form-group {
+    margin-bottom: 20px;
+}
+
+.form-group label {
+    display: block;
+    color: #fff;
+    font-size: 14px;
+    font-weight: 500;
+    margin-bottom: 8px;
+}
+
+.form-input {
+    width: 100%;
+    padding: 12px 16px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 8px;
+    color: #fff;
+    font-size: 14px;
+    transition: all 0.2s ease;
+}
+
+.form-input:focus {
+    outline: none;
+    border-color: #A855F7;
+    background: rgba(255, 255, 255, 0.08);
+    box-shadow: 0 0 0 3px rgba(168, 85, 247, 0.1);
+}
+
+.form-input::placeholder {
+    color: rgba(255, 255, 255, 0.5);
+}
+
+.form-help {
+    display: block;
+    color: rgba(255, 255, 255, 0.6);
+    font-size: 12px;
+    margin-top: 6px;
+    line-height: 1.4;
+}
+
+.dialog-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    padding: 16px 24px 20px;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.btn {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn-secondary {
+    background: rgba(255, 255, 255, 0.1);
+    color: #fff;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.btn-secondary:hover {
+    background: rgba(255, 255, 255, 0.15);
+    border-color: rgba(255, 255, 255, 0.3);
+}
+
+.btn-primary {
+    background: #A855F7;
+    color: #fff;
+}
+
+.btn-primary:hover {
+    background: #9333EA;
+    transform: translateY(-1px);
+}
+
+.btn-primary:active {
+    transform: translateY(0);
+}
+
+/* 移动端弹窗样式优化 */
+@media (max-width: 768px) {
+    .dialog-content {
+        width: 95%;
+        max-height: 85vh;
+    }
+    
+    .dialog-header {
+        padding: 16px 20px 12px;
+    }
+    
+    .dialog-title {
+        font-size: 18px;
+    }
+    
+    .dialog-body {
+        padding: 16px 20px;
+    }
+    
+    .form-group {
+        margin-bottom: 16px;
+    }
+    
+    .form-input {
+        padding: 10px 14px;
+        font-size: 16px; /* 防止iOS缩放 */
+    }
+    
+    .dialog-footer {
+        padding: 12px 20px 16px;
+        flex-direction: column;
+        gap: 8px;
+    }
+    
+    .btn {
+        width: 100%;
+        padding: 12px;
+    }
+    
+    .custom-api-button {
+        top: 15px;
+        right: 195px;
+        width: 50px;
+        height: 50px;
+        min-width: 44px;
+        min-height: 44px;
+        padding: 8px;
+        background: rgba(168, 85, 247, 0.25);
+        border: 2px solid rgba(168, 85, 247, 0.5);
+    }
+}
+
+/* 平板端弹窗样式优化 */
+@media (min-width: 769px) and (max-width: 1024px) {
+    .dialog-content {
+        max-width: 600px;
+    }
+}
+
+/* 触摸设备优化 */
+@media (hover: none) and (pointer: coarse) {
+    .custom-api-button {
+        width: 55px;
+        height: 55px;
+        min-width: 44px;
+        min-height: 44px;
+        backdrop-filter: none;
+        background: rgba(168, 85, 247, 0.25);
+        border: 2px solid rgba(168, 85, 247, 0.5);
+    }
+    
+    .custom-api-button:hover {
+        transform: none;
+    }
+    
+    .custom-api-button:active {
+        background: rgba(168, 85, 247, 0.4) !important;
+        transform: scale(0.95) !important;
+        transition: all 0.1s ease !important;
+    }
+    
+    .form-input {
+        padding: 14px 16px;
+        font-size: 16px;
+    }
+    
+    .btn {
+        padding: 14px 24px;
+        font-size: 16px;
+    }
+}
+
+/* 高对比度模式支持 */
+@media (prefers-contrast: high) {
+    .dialog-content {
+        background: rgba(0, 0, 0, 0.95);
+        border-color: #fff;
+    }
+    
+    .form-input {
+        background: rgba(255, 255, 255, 0.1);
+        border-color: rgba(255, 255, 255, 0.5);
+    }
+    
+    .btn-secondary {
+        background: rgba(255, 255, 255, 0.2);
+        border-color: #fff;
+    }
+    
+    .custom-api-button {
+        background: rgba(168, 85, 247, 0.9);
+        color: #000;
+        border-color: #A855F7;
+    }
+}
+
+/* 减少动画模式支持 */
+@media (prefers-reduced-motion: reduce) {
+    .custom-api-dialog {
+        transition: none;
+    }
+    
+    .dialog-content {
+        animation: none;
+    }
+    
+    .dialog-close,
+    .btn {
+        transition: none;
+    }
+    
+    .btn-primary:hover {
+        transform: none;
+    }
+    
+    .custom-api-button {
+        transition: none;
+    }
+    
+    .custom-api-button:hover {
+        transform: none;
+    }
+}
+
+/* 焦点管理 */
+.dialog-content *:focus {
+    outline: 2px solid #A855F7;
+    outline-offset: 2px;
+    border-radius: 4px;
+}
+
+.dialog-close:focus,
+.btn:focus {
+    outline-color: #fff;
+}
+
+/* 无障碍增强 */
+@media (prefers-reduced-transparency) {
+    .dialog-backdrop {
+        backdrop-filter: none;
+        background: rgba(0, 0, 0, 0.9);
+    }
+    
+    .dialog-content {
+        backdrop-filter: none;
+        background: rgba(20, 20, 20, 1);
+    }
+    
+    .custom-api-button {
+        backdrop-filter: none;
+        background: rgba(168, 85, 247, 0.3);
+    }
+}
+
+/* 强制颜色模式支持 */
+@media (forced-colors: active) {
+    .dialog-content {
+        background: Canvas;
+        color: CanvasText;
+        border: 1px solid ButtonBorder;
+    }
+    
+    .form-input {
+        background: Field;
+        color: FieldText;
+        border: 1px solid ButtonBorder;
+    }
+    
+    .btn-primary {
+        background: ButtonFace;
+        color: ButtonText;
+        border: 1px solid ButtonBorder;
+    }
+    
+    .btn-secondary {
+        background: ButtonFace;
+        color: ButtonText;
+        border: 1px solid ButtonBorder;
+    }
+    
+    .custom-api-button {
+        background: ButtonFace;
+        color: ButtonText;
+        border: 2px solid ButtonBorder;
+    }
+}
+
+/* 现代滚动条样式 */
+.dialog-content::-webkit-scrollbar {
+    width: 8px;
+}
+
+.dialog-content::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 4px;
+}
+
+.dialog-content::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 4px;
+}
+
+.dialog-content::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.3);
+}
+
+/* Firefox 滚动条样式 */
+.dialog-content {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.2) rgba(255, 255, 255, 0.05);
+};
+}
+
+
+.custom-api-button .custom-icon {
+    font-size: 16px;
+    margin-bottom: 2px;
+}
+
+.custom-api-button .custom-text {
+    font-size: 8px;
+    font-weight: 500;
+    line-height: 1;
+}
+
+/* 自定义API弹窗样式 */
+.custom-api-dialog {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 10000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    visibility: visible;
+    opacity: 1;
+    transition: opacity 0.3s ease, visibility 0.3s ease;
+}
+
+.custom-api-dialog.hidden {
+    visibility: hidden;
+    opacity: 0;
+}
+
+.dialog-backdrop {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.8);
+    backdrop-filter: blur(10px);
+}
+
+.dialog-content {
+    position: relative;
+    background: rgba(20, 20, 20, 0.95);
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(20px);
+    max-width: 500px;
+    width: 90%;
+    max-height: 80vh;
+    overflow-y: auto;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+    animation: fadeInScale 0.3s ease-out;
+}
+
+.dialog-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 24px 16px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.dialog-title {
+    font-size: 20px;
+    font-weight: 600;
+    color: #fff;
+    margin: 0;
+}
+
+.dialog-close {
+    background: none;
+    border: none;
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 24px;
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 4px;
+    transition: all 0.2s ease;
+    line-height: 1;
+}
+
+.dialog-close:hover {
+    color: #fff;
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.dialog-body {
+    padding: 20px 24px;
+}
+
+.form-group {
+    margin-bottom: 20px;
+}
+
+.form-group label {
+    display: block;
+    color: #fff;
+    font-size: 14px;
+    font-weight: 500;
+    margin-bottom: 8px;
+}
+
+.form-input {
+    width: 100%;
+    padding: 12px 16px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 8px;
+    color: #fff;
+    font-size: 14px;
+    transition: all 0.2s ease;
+}
+
+.form-input:focus {
+    outline: none;
+    border-color: #A855F7;
+    background: rgba(255, 255, 255, 0.08);
+    box-shadow: 0 0 0 3px rgba(168, 85, 247, 0.1);
+}
+
+.form-input::placeholder {
+    color: rgba(255, 255, 255, 0.5);
+}
+
+.form-help {
+    display: block;
+    color: rgba(255, 255, 255, 0.6);
+    font-size: 12px;
+    margin-top: 6px;
+    line-height: 1.4;
+}
+
+.dialog-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    padding: 16px 24px 20px;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.btn {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn-secondary {
+    background: rgba(255, 255, 255, 0.1);
+    color: #fff;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.btn-secondary:hover {
+    background: rgba(255, 255, 255, 0.15);
+    border-color: rgba(255, 255, 255, 0.3);
+}
+
+.btn-primary {
+    background: #A855F7;
+    color: #fff;
+}
+
+.btn-primary:hover {
+    background: #9333EA;
+    transform: translateY(-1px);
+}
+
+.btn-primary:active {
+    transform: translateY(0);
+}
+
+/* 移动端弹窗样式优化 */
+@media (max-width: 768px) {
+    .dialog-content {
+        width: 95%;
+        max-height: 85vh;
+    }
+    
+    .dialog-header {
+        padding: 16px 20px 12px;
+    }
+    
+    .dialog-title {
+        font-size: 18px;
+    }
+    
+    .dialog-body {
+        padding: 16px 20px;
+    }
+    
+    .form-group {
+        margin-bottom: 16px;
+    }
+    
+    .form-input {
+        padding: 10px 14px;
+        font-size: 16px; /* 防止iOS缩放 */
+    }
+    
+    .dialog-footer {
+        padding: 12px 20px 16px;
+        flex-direction: column;
+        gap: 8px;
+    }
+    
+    .btn {
+        width: 100%;
+        padding: 12px;
+    }
+}
+
+/* 触摸设备优化 */
+@media (hover: none) and (pointer: coarse) {
+    .custom-api-button {
+        width: 55px;
+        height: 55px;
+        min-width: 44px;
+        min-height: 44px;
+        backdrop-filter: none;
+        background: rgba(168, 85, 247, 0.25);
+        border: 2px solid rgba(168, 85, 247, 0.5);
+    }
+    
+    .custom-api-button:hover {
+        transform: none;
+    }
+    
+    .custom-api-button:active {
+        background: rgba(168, 85, 247, 0.4) !important;
+        transform: scale(0.95) !important;
+        transition: all 0.1s ease !important;
+    }
+    
+    .form-input {
+        padding: 14px 16px;
+        font-size: 16px;
+    }
+    
+    .btn {
+        padding: 14px 24px;
+        font-size: 16px;
+    }
+}
+
+/* 高对比度模式支持 */
+@media (prefers-contrast: high) {
+    .dialog-content {
+        background: rgba(0, 0, 0, 0.95);
+        border-color: #fff;
+    }
+    
+    .form-input {
+        background: rgba(255, 255, 255, 0.1);
+        border-color: rgba(255, 255, 255, 0.5);
+    }
+    
+    .btn-secondary {
+        background: rgba(255, 255, 255, 0.2);
+        border-color: #fff;
+    }
+    
+    .custom-api-button {
+        background: rgba(168, 85, 247, 0.9);
+        color: #000;
+        border-color: #A855F7;
+    }
+}
+
+/* 减少动画模式支持 */
+@media (prefers-reduced-motion: reduce) {
+    .custom-api-dialog {
+        transition: none;
+    }
+    
+    .dialog-content {
+        animation: none;
+    }
+    
+    .dialog-close,
+    .btn {
+        transition: none;
+    }
+    
+    .btn-primary:hover {
+        transform: none;
+    }
+    
+    .custom-api-button {
+        transition: none;
+    }
+    
+    .custom-api-button:hover {
+        transform: none;
+    }
+}
+
+/* 焦点管理 */
+.dialog-content *:focus {
+    outline: 2px solid #A855F7;
+    outline-offset: 2px;
+    border-radius: 4px;
+}
+
+.dialog-close:focus,
+.btn:focus {
+    outline-color: #fff;
+}
+
+/* 无障碍增强 */
+@media (prefers-reduced-transparency) {
+    .dialog-backdrop {
+        backdrop-filter: none;
+        background: rgba(0, 0, 0, 0.9);
+    }
+    
+    .dialog-content {
+        backdrop-filter: none;
+        background: rgba(20, 20, 20, 1);
+    }
+    
+    .custom-api-button {
+        backdrop-filter: none;
+        background: rgba(168, 85, 247, 0.3);
+    }
+}
+
+/* 强制颜色模式支持 */
+@media (forced-colors: active) {
+    .dialog-content {
+        background: Canvas;
+        color: CanvasText;
+        border: 1px solid ButtonBorder;
+    }
+    
+    .form-input {
+        background: Field;
+        color: FieldText;
+        border: 1px solid ButtonBorder;
+    }
+    
+    .btn-primary {
+        background: ButtonFace;
+        color: ButtonText;
+        border: 1px solid ButtonBorder;
+    }
+    
+    .btn-secondary {
+        background: ButtonFace;
+        color: ButtonText;
+        border: 1px solid ButtonBorder;
+    }
+    
+    .custom-api-button {
+        background: ButtonFace;
+        color: ButtonText;
+        border: 2px solid ButtonBorder;
+    }
+}
+
+/* 现代滚动条样式 */
+.dialog-content::-webkit-scrollbar {
+    width: 8px;
+}
+
+.dialog-content::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 4px;
+}
+
+.dialog-content::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 4px;
+}
+
+.dialog-content::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.3);
+}
+
+/* Firefox 滚动条样式 */
+.dialog-content {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.2) rgba(255, 255, 255, 0.05);
 }

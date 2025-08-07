@@ -8,10 +8,13 @@ class ApiService {
     this.proxyEndpoint = "/api/image";
     this.redirectEndpoint = "/api/image/redirect";
     this.currentEndpoint = this.redirectEndpoint; // 默认使用新的重定向API
+    this.customEndpoint = null; // 自定义API端点
+    this.customJsonPath = null; // 自定义JSON路径
     this.maxRetries = 3;
     this.retryDelay = 1000; // 1秒
     this.compatibility = window.browserCompatibility;
     this.errorCategories = this.initializeErrorCategories();
+    this.loadCustomApiConfig(); // 加载自定义API配置
   }
 
   /**
@@ -127,6 +130,12 @@ class ApiService {
       throw new Error("API响应格式无效：响应不是有效的JSON对象");
     }
 
+    // 如果使用自定义API，使用自定义JSON路径提取URL
+    if (this.isUsingCustomApi() && this.customJsonPath) {
+      return this.extractImageUrlFromJson(response, this.customJsonPath);
+    }
+
+    // 默认API验证逻辑
     if (response.code !== undefined && response.code !== 200) {
       throw new Error(
         `API返回错误码: ${response.code}, 消息: ${response.msg || "未知错误"}`
@@ -294,6 +303,100 @@ class ApiService {
     }
 
     return "获取图片失败，请稍后重试";
+  }
+
+  /**
+   * 加载自定义API配置
+   */
+  loadCustomApiConfig() {
+    try {
+      const config = localStorage.getItem('custom-api-config');
+      if (config) {
+        const parsed = JSON.parse(config);
+        this.customEndpoint = parsed.url;
+        this.customJsonPath = parsed.jsonPath;
+        console.log('已加载自定义API配置:', parsed);
+      }
+    } catch (error) {
+      console.error('加载自定义API配置失败:', error);
+    }
+  }
+
+  /**
+   * 保存自定义API配置
+   * @param {string} url - API URL
+   * @param {string} jsonPath - JSON路径
+   */
+  saveCustomApiConfig(url, jsonPath) {
+    try {
+      const config = { url, jsonPath };
+      localStorage.setItem('custom-api-config', JSON.stringify(config));
+      this.customEndpoint = url;
+      this.customJsonPath = jsonPath;
+      console.log('已保存自定义API配置:', config);
+    } catch (error) {
+      console.error('保存自定义API配置失败:', error);
+      throw new Error('保存配置失败');
+    }
+  }
+
+  /**
+   * 切换到自定义API
+   */
+  switchToCustomApi() {
+    if (!this.customEndpoint || !this.customJsonPath) {
+      throw new Error('自定义API配置不完整');
+    }
+    this.currentEndpoint = this.customEndpoint;
+    console.log('已切换到自定义API:', this.currentEndpoint);
+  }
+
+  /**
+   * 检查是否使用自定义API
+   * @returns {boolean} 是否使用自定义API
+   */
+  isUsingCustomApi() {
+    return this.currentEndpoint === this.customEndpoint;
+  }
+
+  /**
+   * 从JSON响应中提取图片URL
+   * @param {Object} response - API响应数据
+   * @param {string} jsonPath - JSON路径
+   * @returns {string} 图片URL
+   */
+  extractImageUrlFromJson(response, jsonPath) {
+    if (!jsonPath) {
+      throw new Error('JSON路径未指定');
+    }
+
+    try {
+      // 支持简单的点分割路径，如 "data.url" 或 "result.image"
+      const pathParts = jsonPath.split('.');
+      let value = response;
+
+      for (const part of pathParts) {
+        if (value === null || value === undefined) {
+          throw new Error(`JSON路径 "${jsonPath}" 中的 "${part}" 不存在`);
+        }
+        value = value[part];
+      }
+
+      if (typeof value !== 'string') {
+        throw new Error(`JSON路径 "${jsonPath}" 指向的值不是字符串`);
+      }
+
+      // 验证URL格式
+      try {
+        new URL(value);
+      } catch {
+        throw new Error(`提取的值不是有效的URL: ${value}`);
+      }
+
+      return value;
+    } catch (error) {
+      throw new Error(`从JSON中提取图片URL失败: ${error.message}`);
+    }
   }
 }
 
@@ -719,6 +822,10 @@ class ImageViewer {
     this.uiController = new UIController();
     this.responsiveManager = new ResponsiveManager();
 
+    // 初始化图片URL队列系统
+    this.imageUrlQueue = [];
+    this.maxQueueSize = 10; // 最大队列长度
+
     // 初始化性能优化组件
     this.imageCache = new ImageCache({
       maxCacheSize: 20,
@@ -734,6 +841,7 @@ class ImageViewer {
         maxPreloadCount: 8,
         minPreloadCount: 2,
         performanceMonitor: this.performanceMonitor,
+        imageViewer: this, // 传递当前实例以访问队列方法
       }
     );
     this.eventOptimizer = new EventOptimizer();
@@ -787,6 +895,51 @@ class ImageViewer {
 
     // 绑定帮助按钮事件
     this.bindHelpButton();
+  }
+
+  /**
+   * 向图片URL队列添加URL
+   * @param {string} imageUrl - 图片URL
+   */
+  addToQueue(imageUrl) {
+    if (!imageUrl || this.imageUrlQueue.includes(imageUrl)) {
+      return; // 避免重复添加
+    }
+
+    // 如果队列已满，移除最旧的URL
+    if (this.imageUrlQueue.length >= this.maxQueueSize) {
+      const removedUrl = this.imageUrlQueue.shift();
+      console.log('队列已满，移除最旧的URL:', removedUrl);
+    }
+
+    this.imageUrlQueue.push(imageUrl);
+    console.log('添加URL到队列:', imageUrl, '队列长度:', this.imageUrlQueue.length);
+  }
+
+  /**
+   * 从队列获取下一个图片URL
+   * @returns {string|null} 图片URL或null
+   */
+  getNextFromQueue() {
+    if (this.imageUrlQueue.length === 0) {
+      return null;
+    }
+    
+    const url = this.imageUrlQueue.shift();
+    console.log('从队列获取URL:', url, '剩余队列长度:', this.imageUrlQueue.length);
+    return url;
+  }
+
+  /**
+   * 获取队列状态
+   * @returns {Object} 队列状态信息
+   */
+  getQueueStatus() {
+    return {
+      length: this.imageUrlQueue.length,
+      maxSize: this.maxQueueSize,
+      urls: [...this.imageUrlQueue] // 返回副本
+    };
   }
 
   /**
@@ -1978,13 +2131,24 @@ class ImageViewer {
         throw new Error("网络连接不可用，请检查网络设置");
       }
 
-      // 获取图片URL
-      const apiStartTime = performance.now();
-      const imageUrl = await this.apiService.fetchImage();
-      const apiEndTime = performance.now();
+      let imageUrl;
+      let fromQueue = false;
 
-      // 记录API调用时间
-      this.performanceMonitor.recordApiCallTime(apiStartTime, apiEndTime, true);
+      // 优先从队列中获取预加载的图片URL
+      imageUrl = this.getNextFromQueue();
+      if (imageUrl) {
+        fromQueue = true;
+        console.log("从预加载队列获取图片URL:", imageUrl);
+      } else {
+        // 队列为空时才调用API获取新图片
+        const apiStartTime = performance.now();
+        imageUrl = await this.apiService.fetchImage();
+        const apiEndTime = performance.now();
+        
+        // 记录API调用时间
+        this.performanceMonitor.recordApiCallTime(apiStartTime, apiEndTime, true);
+        console.log("从API获取新图片URL:", imageUrl);
+      }
 
       // 检查缓存
       let cachedImage = this.imageCache.get(imageUrl);
@@ -2008,12 +2172,17 @@ class ImageViewer {
         this.imageCache.getStats().memoryUsage
       );
 
-      // 触发智能预加载
+      // 触发智能预加载（补充队列）
       this.preloadStrategy.smartPreload(imageUrl);
+
+      // 如果是从队列获取的图片，触发预加载补充
+      if (fromQueue) {
+        this.preloadStrategy.preloadOnImageLoad(imageUrl);
+      }
 
       const endTime = performance.now();
       console.log(
-        `图片加载完成，总耗时: ${(endTime - startTime).toFixed(2)}ms`
+        `图片加载完成，总耗时: ${(endTime - startTime).toFixed(2)}ms，来源: ${fromQueue ? '预加载队列' : 'API调用'}`
       );
     } catch (error) {
       const endTime = performance.now();
@@ -2748,9 +2917,36 @@ class H5ImageViewerApp {
 
       this.state.isInitialized = true;
       console.log("所有模块初始化完成");
+      
+      // 为了方便全局函数访问，添加便捷的属性访问器
+      this.setupPropertyAccessors();
     } catch (error) {
       console.error("模块初始化失败:", error);
       this.handleGlobalError(error, "initialization");
+    }
+  }
+
+  /**
+   * 设置便捷的属性访问器
+   */
+  setupPropertyAccessors() {
+    // 直接暴露常用模块到类的顶层属性，方便全局函数访问
+    this.apiService = this.state.modules.apiService;
+    this.uiController = this.state.modules.uiController;
+    this.imageViewer = this.state.modules.imageViewer;
+    this.responsiveManager = this.state.modules.responsiveManager;
+    
+    console.log("属性访问器已设置");
+  }
+
+  /**
+   * 加载图片的便捷方法
+   */
+  loadImage() {
+    if (this.imageViewer && typeof this.imageViewer.loadImage === 'function') {
+      return this.imageViewer.loadImage();
+    } else {
+      console.error('ImageViewer未初始化或loadImage方法不存在');
     }
   }
 
@@ -3086,40 +3282,209 @@ document.addEventListener("DOMContentLoaded", () => {
  * 全局API切换函数
  */
 window.switchApiSource = function() {
-  if (!window.imageViewerApp || !window.imageViewerApp.state || !window.imageViewerApp.state.modules) {
-    console.error('应用未初始化，无法切换API');
-    return;
-  }
-
-  const imageViewer = window.imageViewerApp.state.modules.imageViewer;
-  if (!imageViewer || !imageViewer.apiService) {
-    console.error('ImageViewer或ApiService未初始化');
-    return;
-  }
-
-  const apiService = imageViewer.apiService;
-  const button = document.getElementById('api-switch-button');
-  const buttonText = button.querySelector('.api-text');
+  console.log('切换API源');
   
-  // 切换API源
-  if (apiService.currentEndpoint === apiService.redirectEndpoint) {
-    // 当前使用新API，切换到旧API
-    apiService.switchApiSource('default');
-    buttonText.textContent = '旧API';
-    button.style.background = 'rgba(239, 68, 68, 0.2)';
-    button.style.borderColor = 'rgba(239, 68, 68, 0.4)';
-    imageViewer.uiController.showUserFeedback('已切换到旧API', 1500);
-  } else {
-    // 当前使用旧API，切换到新API
-    apiService.switchApiSource('redirect');
-    buttonText.textContent = '新API';
-    button.style.background = 'rgba(34, 197, 94, 0.2)';
-    button.style.borderColor = 'rgba(34, 197, 94, 0.4)';
-    imageViewer.uiController.showUserFeedback('已切换到新API', 1500);
+  if (!window.imageViewerApp) {
+    console.error('应用实例未找到，可能还在初始化中');
+    alert('应用正在初始化中，请稍后重试');
+    return;
   }
 
-  // 立即加载新图片以测试API
-  setTimeout(() => {
-    imageViewer.loadImage();
-  }, 500);
+  // 直接访问应用实例的属性
+  const apiService = window.imageViewerApp.apiService;
+  const uiController = window.imageViewerApp.uiController;
+  
+  if (!apiService) {
+    console.error('ApiService未初始化');
+    alert('服务未初始化，请刷新页面重试');
+    return;
+  }
+
+  const button = document.getElementById('api-switch-button');
+  const buttonText = button ? button.querySelector('.button-text') : null;
+  
+  try {
+    // 检查当前使用的API并切换
+    if (apiService.isUsingCustomApi && apiService.isUsingCustomApi()) {
+      // 从自定义API切换到默认API
+      apiService.switchApiSource('redirect');
+      if (buttonText) buttonText.textContent = '新API';
+      if (uiController) {
+        uiController.showUserFeedback('已切换到默认API', 1500);
+      }
+    } else if (apiService.currentEndpoint === apiService.redirectEndpoint) {
+      // 从重定向API切换到代理API
+      apiService.switchApiSource('default');
+      if (buttonText) buttonText.textContent = '旧API';
+      if (uiController) {
+        uiController.showUserFeedback('已切换到代理API', 1500);
+      }
+    } else {
+      // 从代理API切换到重定向API
+      apiService.switchApiSource('redirect');
+      if (buttonText) buttonText.textContent = '新API';
+      if (uiController) {
+        uiController.showUserFeedback('已切换到重定向API', 1500);
+      }
+    }
+
+    // 立即加载一张图片测试新的API
+    setTimeout(() => {
+      if (window.imageViewerApp && window.imageViewerApp.loadImage) {
+        window.imageViewerApp.loadImage();
+      }
+    }, 500);
+    
+  } catch (error) {
+    console.error('切换API时发生错误:', error);
+    if (uiController) {
+      uiController.showUserFeedback('切换API失败，请重试', 2000);
+    } else {
+      alert('切换API失败，请重试');
+    }
+  }
 };
+// 全局函数 - 自定义API弹窗管理
+window.showCustomApiDialog = function() {
+  console.log('显示自定义API弹窗');
+  const dialog = document.getElementById('custom-api-dialog');
+  const urlInput = document.getElementById('custom-api-url');
+  const pathInput = document.getElementById('custom-json-path');
+  
+  if (!dialog) {
+    console.error('自定义API弹窗元素未找到');
+    alert('弹窗元素未找到，请刷新页面重试');
+    return;
+  }
+
+  // 加载现有配置
+  try {
+    const config = localStorage.getItem('custom-api-config');
+    if (config) {
+      const parsed = JSON.parse(config);
+      urlInput.value = parsed.url || '';
+      pathInput.value = parsed.jsonPath || '';
+    }
+  } catch (error) {
+    console.error('加载自定义API配置失败:', error);
+  }
+
+  // 显示弹窗
+  dialog.classList.remove('hidden');
+  
+  // 聚焦到第一个输入框
+  setTimeout(() => {
+    urlInput.focus();
+  }, 100);
+
+  // 添加ESC键关闭功能
+  const handleEscKey = (event) => {
+    if (event.key === 'Escape') {
+      window.hideCustomApiDialog();
+      document.removeEventListener('keydown', handleEscKey);
+    }
+  };
+  document.addEventListener('keydown', handleEscKey);
+
+  // 点击背景关闭弹窗
+  const backdrop = dialog.querySelector('.dialog-backdrop');
+  const handleBackdropClick = (event) => {
+    if (event.target === backdrop) {
+      window.hideCustomApiDialog();
+      backdrop.removeEventListener('click', handleBackdropClick);
+    }
+  };
+  backdrop.addEventListener('click', handleBackdropClick);
+};
+
+window.hideCustomApiDialog = function() {
+  console.log('隐藏自定义API弹窗');
+  const dialog = document.getElementById('custom-api-dialog');
+  
+  if (!dialog) {
+    console.error('自定义API弹窗元素未找到');
+    return;
+  }
+
+  // 隐藏弹窗
+  dialog.classList.add('hidden');
+};
+
+window.saveCustomApi = function() {
+  console.log('保存自定义API配置');
+  const urlInput = document.getElementById('custom-api-url');
+  const pathInput = document.getElementById('custom-json-path');
+  
+  if (!urlInput || !pathInput) {
+    console.error('输入框元素未找到');
+    return;
+  }
+
+  const url = urlInput.value.trim();
+  const jsonPath = pathInput.value.trim();
+
+  // 验证输入
+  if (!url) {
+    alert('请输入API URL');
+    urlInput.focus();
+    return;
+  }
+
+  if (!jsonPath) {
+    alert('请输入JSON路径');
+    pathInput.focus();
+    return;
+  }
+
+  // 验证URL格式
+  try {
+    new URL(url);
+  } catch (error) {
+    alert('请输入有效的URL格式');
+    urlInput.focus();
+    return;
+  }
+
+  // 验证JSON路径格式（简单验证）
+  if (!/^[a-zA-Z_$][a-zA-Z0-9_$]*(\.[a-zA-Z_$][a-zA-Z0-9_$]*)*$/.test(jsonPath)) {
+    alert('JSON路径格式无效，请使用点分割格式，如: data.url 或 result.image');
+    pathInput.focus();
+    return;
+  }
+
+  try {
+    // 获取全局应用实例
+    if (window.imageViewerApp && window.imageViewerApp.apiService) {
+      // 保存配置
+      window.imageViewerApp.apiService.saveCustomApiConfig(url, jsonPath);
+      
+      // 切换到自定义API
+      window.imageViewerApp.apiService.switchToCustomApi();
+      
+      // 显示成功消息
+      if (window.imageViewerApp.uiController) {
+        window.imageViewerApp.uiController.showUserFeedback('自定义API配置已保存', 2000);
+      }
+      
+      // 关闭弹窗
+      window.hideCustomApiDialog();
+      
+      // 立即加载一张图片测试
+      setTimeout(() => {
+        if (window.imageViewerApp.uiController) {
+          window.imageViewerApp.uiController.showUserFeedback('正在测试自定义API...', 1500);
+        }
+        window.imageViewerApp.loadImage();
+      }, 500);
+      
+    } else {
+      console.error('应用实例未找到');
+      alert('保存失败：应用未正确初始化');
+    }
+  } catch (error) {
+    console.error('保存自定义API配置失败:', error);
+    alert('保存失败：' + error.message);
+  }
+};
+
+// 注意：switchApiSource函数已在上面定义，这里删除重复定义

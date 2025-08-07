@@ -20,38 +20,111 @@
         <button id="retry-btn">重试</button>
       </div>
 
-      <!-- 帮助按钮 -->
-      <button
-        id="help-button"
-        class="help-button"
-        title="显示操作指南 (F1)"
-        aria-label="显示操作指南"
-        aria-describedby="help-description"
-        role="button"
-        tabindex="0"
-        onclick="if(window.imageViewerApp && window.imageViewerApp.state && window.imageViewerApp.state.modules && window.imageViewerApp.state.modules.imageViewer) { window.imageViewerApp.state.modules.imageViewer.handleHelpButtonClick(); } else { alert('帮助功能正在加载中，请稍后重试'); }"
-        ontouchstart="this.style.transform='scale(0.95)'; this.style.background='rgba(255,255,255,0.25)';"
-        ontouchend="this.style.transform='scale(1)'; this.style.background='';"
-      >
-        <span class="help-icon" aria-hidden="true">?</span>
-        <span class="help-text" aria-hidden="true">帮助</span>
-      </button>
+      <!-- 按钮容器 -->
+      <div class="button-container">
+        <!-- API切换按钮 -->
+        <button
+          id="api-switch-button"
+          class="action-button api-switch-button"
+          title="切换图片API源"
+          aria-label="切换图片API源"
+          role="button"
+          tabindex="0"
+          onclick="window.switchApiSource()"
+          ontouchstart="this.style.transform='scale(0.95)'; this.style.background='rgba(255,255,255,0.25)';"
+          ontouchend="this.style.transform='scale(1)'; this.style.background='';"
+        >
+          <span class="button-icon" aria-hidden="true">🔄</span>
+          <span class="button-text" aria-hidden="true">新API</span>
+        </button>
 
-      <!-- API切换按钮 -->
-      <button
-        id="api-switch-button"
-        class="api-switch-button"
-        title="切换图片API源"
-        aria-label="切换图片API源"
-        role="button"
-        tabindex="0"
-        onclick="window.switchApiSource()"
-        ontouchstart="this.style.transform='scale(0.95)'; this.style.background='rgba(255,255,255,0.25)';"
-        ontouchend="this.style.transform='scale(1)'; this.style.background='';"
-      >
-        <span class="api-icon" aria-hidden="true">🔄</span>
-        <span class="api-text" aria-hidden="true">新API</span>
-      </button>
+        <!-- 自定义API按钮 -->
+        <button
+          id="custom-api-button"
+          class="action-button custom-api-button"
+          title="自定义图片API"
+          aria-label="自定义图片API"
+          role="button"
+          tabindex="0"
+          onclick="window.showCustomApiDialog()"
+          ontouchstart="this.style.transform='scale(0.95)'; this.style.background='rgba(255,255,255,0.25)';"
+          ontouchend="this.style.transform='scale(1)'; this.style.background='';"
+        >
+          <span class="button-icon" aria-hidden="true">⚙️</span>
+          <span class="button-text" aria-hidden="true">自定义</span>
+        </button>
+
+        <!-- 帮助按钮 -->
+        <button
+          id="help-button"
+          class="action-button help-button"
+          title="显示操作指南 (F1)"
+          aria-label="显示操作指南"
+          aria-describedby="help-description"
+          role="button"
+          tabindex="0"
+          onclick="if(window.imageViewerApp && window.imageViewerApp.state && window.imageViewerApp.state.modules && window.imageViewerApp.state.modules.imageViewer) { window.imageViewerApp.state.modules.imageViewer.handleHelpButtonClick(); } else { alert('帮助功能正在加载中，请稍后重试'); }"
+          ontouchstart="this.style.transform='scale(0.95)'; this.style.background='rgba(255,255,255,0.25)';"
+          ontouchend="this.style.transform='scale(1)'; this.style.background='';"
+        >
+          <span class="button-icon" aria-hidden="true">?</span>
+          <span class="button-text" aria-hidden="true">帮助</span>
+        </button>
+      </div>
+
+      <!-- 自定义API弹窗 -->
+      <div id="custom-api-dialog" class="custom-api-dialog hidden">
+        <div class="dialog-backdrop"></div>
+        <div class="dialog-content">
+          <div class="dialog-header">
+            <h3 class="dialog-title">自定义图片API</h3>
+            <button
+              class="dialog-close"
+              onclick="window.hideCustomApiDialog()"
+              aria-label="关闭弹窗"
+            >
+              ×
+            </button>
+          </div>
+          <div class="dialog-body">
+            <div class="form-group">
+              <label for="custom-api-url">API URL:</label>
+              <input
+                type="url"
+                id="custom-api-url"
+                class="form-input"
+                placeholder="https://api.example.com/image"
+                required
+              />
+            </div>
+            <div class="form-group">
+              <label for="custom-json-path">JSON路径 (用于提取图片URL):</label>
+              <input
+                type="text"
+                id="custom-json-path"
+                class="form-input"
+                placeholder="例如: data.url 或 imageUrl 或 result.image"
+                required
+              />
+              <small class="form-help">
+                指定如何从API响应中提取图片URL。例如：如果响应是 {"data":
+                {"url": "image.jpg"}}，则填入 "data.url"
+              </small>
+            </div>
+          </div>
+          <div class="dialog-footer">
+            <button
+              class="btn btn-secondary"
+              onclick="window.hideCustomApiDialog()"
+            >
+              取消
+            </button>
+            <button class="btn btn-primary" onclick="window.saveCustomApi()">
+              保存并使用
+            </button>
+          </div>
+        </div>
+      </div>
 
       <!-- 隐藏的描述文本，用于屏幕阅读器 -->
       <div id="help-description" class="sr-only">
