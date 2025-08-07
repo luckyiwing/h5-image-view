@@ -37,22 +37,6 @@
         <span class="help-text" aria-hidden="true">帮助</span>
       </button>
 
-      <!-- 网络诊断按钮 -->
-      <button
-        id="diagnostic-button"
-        class="diagnostic-button"
-        title="网络诊断 (Ctrl+D)"
-        aria-label="运行网络诊断"
-        role="button"
-        tabindex="0"
-        onclick="window.runNetworkDiagnosis()"
-        ontouchstart="this.style.transform='scale(0.95)'; this.style.background='rgba(255,255,255,0.25)';"
-        ontouchend="this.style.transform='scale(1)'; this.style.background='';"
-      >
-        <span class="diagnostic-icon" aria-hidden="true">🔍</span>
-        <span class="diagnostic-text" aria-hidden="true">诊断</span>
-      </button>
-
       <!-- API切换按钮 -->
       <button
         id="api-switch-button"
@@ -83,7 +67,7 @@
     <script src="user-guide-manager.js"></script>
     <script src="animation-controller.js"></script>
     <script src="guide-integration-test.js"></script>
-    <script src="network-diagnostic.js"></script>
+
     <script src="app.js"></script>
     <script src="test-functionality.js"></script>
   </body>
