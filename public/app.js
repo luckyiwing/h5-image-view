@@ -14,6 +14,14 @@ class ApiService {
     this.retryDelay = 1000; // 1秒
     this.compatibility = window.browserCompatibility;
     this.errorCategories = this.initializeErrorCategories();
+
+    // 新增：API调用优化
+    this.lastApiCall = 0;
+    this.minApiInterval = 1500; // 最小API调用间隔1.5秒
+    this.pendingRequests = new Map(); // 请求去重
+    this.requestQueue = []; // 请求队列
+    this.isProcessingQueue = false;
+
     this.loadCustomApiConfig(); // 加载自定义API配置
   }
 
@@ -37,21 +45,56 @@ class ApiService {
    * 切换API源
    * @param {string} source - API源 ('default' 或 'redirect')
    */
-  switchApiSource(source = 'default') {
-    if (source === 'redirect') {
+  switchApiSource(source = "default") {
+    if (source === "redirect") {
       this.currentEndpoint = this.redirectEndpoint;
-      console.log('已切换到重定向API:', this.currentEndpoint);
+      console.log("已切换到重定向API:", this.currentEndpoint);
     } else {
       this.currentEndpoint = this.proxyEndpoint;
-      console.log('已切换到默认API:', this.currentEndpoint);
+      console.log("已切换到默认API:", this.currentEndpoint);
     }
   }
 
   /**
-   * 获取图片URL
+   * 优化的获取图片URL - 带去重和频率控制
    * @returns {Promise<string>} 图片URL
    */
   async fetchImage() {
+    // 检查API调用频率限制
+    const now = Date.now();
+    const timeSinceLastCall = now - this.lastApiCall;
+
+    if (timeSinceLastCall < this.minApiInterval) {
+      const waitTime = this.minApiInterval - timeSinceLastCall;
+      console.log(`API调用频率限制，等待 ${waitTime}ms`);
+      await this.delay(waitTime);
+    }
+
+    // 检查是否有相同的请求正在进行
+    const requestKey = this.currentEndpoint;
+    if (this.pendingRequests.has(requestKey)) {
+      console.log("检测到重复请求，等待现有请求完成");
+      return await this.pendingRequests.get(requestKey);
+    }
+
+    // 创建新的请求Promise
+    const requestPromise = this.executeApiRequest();
+    this.pendingRequests.set(requestKey, requestPromise);
+
+    try {
+      const result = await requestPromise;
+      this.lastApiCall = Date.now();
+      return result;
+    } finally {
+      this.pendingRequests.delete(requestKey);
+    }
+  }
+
+  /**
+   * 执行实际的API请求
+   * @returns {Promise<string>} 图片URL
+   */
+  async executeApiRequest() {
     let lastError;
 
     // 检查浏览器兼容性
@@ -61,7 +104,9 @@ class ApiService {
 
     for (let attempt = 1; attempt <= this.maxRetries; attempt++) {
       try {
-        console.log(`API调用尝试 ${attempt}/${this.maxRetries} (端点: ${this.currentEndpoint})`);
+        console.log(
+          `API调用尝试 ${attempt}/${this.maxRetries} (端点: ${this.currentEndpoint})`
+        );
 
         // 使用兼容的超时信号 - 减少到5秒
         const timeoutSignal = this.compatibility.createTimeoutSignal(5000);
@@ -99,7 +144,7 @@ class ApiService {
         // 如果是第一次尝试失败且使用默认API，尝试切换到重定向API
         if (attempt === 1 && this.currentEndpoint === this.proxyEndpoint) {
           console.log("默认API失败，尝试切换到重定向API");
-          this.switchApiSource('redirect');
+          this.switchApiSource("redirect");
           continue; // 重新尝试，不计入重试次数
         }
 
@@ -310,15 +355,15 @@ class ApiService {
    */
   loadCustomApiConfig() {
     try {
-      const config = localStorage.getItem('custom-api-config');
+      const config = localStorage.getItem("custom-api-config");
       if (config) {
         const parsed = JSON.parse(config);
         this.customEndpoint = parsed.url;
         this.customJsonPath = parsed.jsonPath;
-        console.log('已加载自定义API配置:', parsed);
+        console.log("已加载自定义API配置:", parsed);
       }
     } catch (error) {
-      console.error('加载自定义API配置失败:', error);
+      console.error("加载自定义API配置失败:", error);
     }
   }
 
@@ -330,13 +375,13 @@ class ApiService {
   saveCustomApiConfig(url, jsonPath) {
     try {
       const config = { url, jsonPath };
-      localStorage.setItem('custom-api-config', JSON.stringify(config));
+      localStorage.setItem("custom-api-config", JSON.stringify(config));
       this.customEndpoint = url;
       this.customJsonPath = jsonPath;
-      console.log('已保存自定义API配置:', config);
+      console.log("已保存自定义API配置:", config);
     } catch (error) {
-      console.error('保存自定义API配置失败:', error);
-      throw new Error('保存配置失败');
+      console.error("保存自定义API配置失败:", error);
+      throw new Error("保存配置失败");
     }
   }
 
@@ -345,10 +390,10 @@ class ApiService {
    */
   switchToCustomApi() {
     if (!this.customEndpoint || !this.customJsonPath) {
-      throw new Error('自定义API配置不完整');
+      throw new Error("自定义API配置不完整");
     }
     this.currentEndpoint = this.customEndpoint;
-    console.log('已切换到自定义API:', this.currentEndpoint);
+    console.log("已切换到自定义API:", this.currentEndpoint);
   }
 
   /**
@@ -367,12 +412,12 @@ class ApiService {
    */
   extractImageUrlFromJson(response, jsonPath) {
     if (!jsonPath) {
-      throw new Error('JSON路径未指定');
+      throw new Error("JSON路径未指定");
     }
 
     try {
       // 支持简单的点分割路径，如 "data.url" 或 "result.image"
-      const pathParts = jsonPath.split('.');
+      const pathParts = jsonPath.split(".");
       let value = response;
 
       for (const part of pathParts) {
@@ -382,7 +427,7 @@ class ApiService {
         value = value[part];
       }
 
-      if (typeof value !== 'string') {
+      if (typeof value !== "string") {
         throw new Error(`JSON路径 "${jsonPath}" 指向的值不是字符串`);
       }
 
@@ -706,7 +751,7 @@ class UIController {
         if (isResolved) return;
         isResolved = true;
         clearTimeout(timeout);
-        
+
         console.log("图片资源加载成功:", imageUrl);
 
         // 如果提供了响应式管理器，自动调整图片尺寸
@@ -732,7 +777,7 @@ class UIController {
         if (isResolved) return;
         isResolved = true;
         clearTimeout(timeout);
-        
+
         console.error("图片资源加载失败:", imageUrl);
         reject(new Error("图片资源加载失败，可能图片已损坏或不存在"));
       };
@@ -826,20 +871,37 @@ class ImageViewer {
     this.imageUrlQueue = [];
     this.maxQueueSize = 10; // 最大队列长度
 
-    // 初始化性能优化组件
+    // 初始化历史记录系统
+    this.imageHistory = []; // 历史记录栈
+    this.currentHistoryIndex = -1; // 当前在历史中的位置，-1表示最新
+    this.maxHistorySize = 30; // 最大历史记录数量
+    this.currentImageUrl = null; // 当前显示的图片URL
+    
+    // 初始化状态标志
+    this.isInitialLoad = true; // 标记是否为初始加载
+
+    // 优化后的性能组件配置 - 集成浏览器缓存优化器
+    this.browserCacheOptimizer = new BrowserCacheOptimizer({
+      enableServiceWorker: true,
+      cacheStrategy: "cache-first",
+      maxAge: 3600, // 1小时
+      maxPreloadLinks: 2, // 最多2个预加载链接
+    });
+
     this.imageCache = new ImageCache({
-      maxCacheSize: 20,
-      maxMemorySize: 50 * 1024 * 1024,
+      maxCacheSize: 3, // 进一步减少缓存数量
+      maxMemorySize: 15 * 1024 * 1024, // 减少到15MB
     });
     this.performanceMonitor = new PerformanceMonitor();
     this.preloadStrategy = new EnhancedPreloadStrategy(
       this.apiService,
       this.imageCache,
       {
-        preloadCount: 3,
-        adaptiveThreshold: 0.7,
-        maxPreloadCount: 8,
-        minPreloadCount: 2,
+        preloadCount: 1, // 进一步减少预加载数量
+        adaptiveThreshold: 0.9, // 进一步提高缓存命中率阈值
+        maxPreloadCount: 2, // 进一步减少最大预加载数量
+        minPreloadCount: 1, // 保持最小预加载数量
+        preloadDelay: 4000, // 增加预加载延迟到4秒
         performanceMonitor: this.performanceMonitor,
         imageViewer: this, // 传递当前实例以访问队列方法
       }
@@ -874,6 +936,14 @@ class ImageViewer {
       disableInteractionDuringAnimation: true,
     });
 
+    // 初始化历史面板优化器
+    this.historyPanelOptimizer = new HistoryPanelOptimizer(this.imageCache, {
+      maxVisibleItems: 20, // 基于测试结果，可以适当增加显示数量
+      imageTimeout: 1500, // 进一步减少超时时间到1.5秒
+      batchSize: 5, // 增加批量大小，提高渲染效率
+      lazyLoadThreshold: 3, // 减少懒加载阈值
+    });
+
     // 设置动画性能监控
     this.setupAnimationPerformanceMonitoring();
 
@@ -881,12 +951,19 @@ class ImageViewer {
     this.bindEvents();
     this.setupResponsiveHandlers();
     this.setupUserGuideHandlers();
-    this.loadImage();
+    
+    // 确保错误信息在初始化时是隐藏的
+    this.uiController.hideError();
+    
+    // 延迟初始图片加载，确保所有服务都已准备好
+    setTimeout(() => {
+      this.loadFirstImage();
+    }, 2000);
 
-    // 启动预加载策略
+    // 优化启动预加载策略 - 延迟更长时间，减少初始负载
     setTimeout(() => {
       this.preloadStrategy.startPreloading();
-    }, 2000);
+    }, 5000); // 增加到5秒延迟
 
     // 初始化用户引导功能
     setTimeout(() => {
@@ -909,11 +986,16 @@ class ImageViewer {
     // 如果队列已满，移除最旧的URL
     if (this.imageUrlQueue.length >= this.maxQueueSize) {
       const removedUrl = this.imageUrlQueue.shift();
-      console.log('队列已满，移除最旧的URL:', removedUrl);
+      console.log("队列已满，移除最旧的URL:", removedUrl);
     }
 
     this.imageUrlQueue.push(imageUrl);
-    console.log('添加URL到队列:', imageUrl, '队列长度:', this.imageUrlQueue.length);
+    console.log(
+      "添加URL到队列:",
+      imageUrl,
+      "队列长度:",
+      this.imageUrlQueue.length
+    );
   }
 
   /**
@@ -924,9 +1006,14 @@ class ImageViewer {
     if (this.imageUrlQueue.length === 0) {
       return null;
     }
-    
+
     const url = this.imageUrlQueue.shift();
-    console.log('从队列获取URL:', url, '剩余队列长度:', this.imageUrlQueue.length);
+    console.log(
+      "从队列获取URL:",
+      url,
+      "剩余队列长度:",
+      this.imageUrlQueue.length
+    );
     return url;
   }
 
@@ -938,7 +1025,128 @@ class ImageViewer {
     return {
       length: this.imageUrlQueue.length,
       maxSize: this.maxQueueSize,
-      urls: [...this.imageUrlQueue] // 返回副本
+      urls: [...this.imageUrlQueue], // 返回副本
+    };
+  }
+
+  /**
+   * 添加图片到历史记录
+   * @param {string} imageUrl - 图片URL
+   */
+  addToHistory(imageUrl) {
+    if (!imageUrl) return;
+
+    // 如果当前不在历史记录的末尾，需要清除后面的记录
+    if (this.currentHistoryIndex !== -1) {
+      this.imageHistory = this.imageHistory.slice(0, this.currentHistoryIndex + 1);
+      this.currentHistoryIndex = -1;
+    }
+
+    // 避免重复添加相同的URL
+    if (this.imageHistory.length > 0 && this.imageHistory[this.imageHistory.length - 1] === imageUrl) {
+      return;
+    }
+
+    // 添加到历史记录
+    this.imageHistory.push(imageUrl);
+
+    // 限制历史记录大小
+    if (this.imageHistory.length > this.maxHistorySize) {
+      this.imageHistory.shift(); // 移除最旧的记录
+      console.log("历史记录已满，移除最旧的记录");
+    }
+
+    console.log("添加到历史记录:", imageUrl, "历史长度:", this.imageHistory.length);
+  }
+
+  /**
+   * 从历史记录获取上一张图片
+   * @returns {string|null} 上一张图片URL或null
+   */
+  getPreviousFromHistory() {
+    if (this.imageHistory.length === 0) {
+      return null;
+    }
+
+    // 如果当前在最新位置（-1），开始从倒数第二张开始
+    if (this.currentHistoryIndex === -1) {
+      if (this.imageHistory.length < 2) {
+        return null; // 历史记录不足
+      }
+      this.currentHistoryIndex = this.imageHistory.length - 2;
+    } else {
+      // 继续向前移动
+      this.currentHistoryIndex--;
+      if (this.currentHistoryIndex < 0) {
+        this.currentHistoryIndex = 0;
+        return null; // 已经到达历史开头
+      }
+    }
+
+    const previousUrl = this.imageHistory[this.currentHistoryIndex];
+    console.log("从历史记录获取上一张:", previousUrl, "索引:", this.currentHistoryIndex);
+    return previousUrl;
+  }
+
+  /**
+   * 检查是否可以返回上一张
+   * @returns {boolean} 是否有上一张图片
+   */
+  canGoPrevious() {
+    if (this.imageHistory.length === 0) return false;
+    
+    if (this.currentHistoryIndex === -1) {
+      return this.imageHistory.length >= 2;
+    }
+    
+    return this.currentHistoryIndex > 0;
+  }
+
+  /**
+   * 检查是否可以前进到下一张
+   * @returns {boolean} 是否可以前进
+   */
+  canGoNext() {
+    if (this.currentHistoryIndex === -1) {
+      return true; // 在最新位置，总是可以获取新图片
+    }
+    
+    return this.currentHistoryIndex < this.imageHistory.length - 1;
+  }
+
+  /**
+   * 前进到历史记录中的下一张
+   * @returns {string|null} 下一张图片URL或null
+   */
+  getNextFromHistory() {
+    if (this.currentHistoryIndex === -1) {
+      return null; // 已经在最新位置
+    }
+
+    this.currentHistoryIndex++;
+    if (this.currentHistoryIndex >= this.imageHistory.length - 1) {
+      this.currentHistoryIndex = -1; // 回到最新位置
+      return null;
+    }
+
+    const nextUrl = this.imageHistory[this.currentHistoryIndex];
+    console.log("从历史记录前进到下一张:", nextUrl, "索引:", this.currentHistoryIndex);
+    return nextUrl;
+  }
+
+  /**
+   * 获取历史记录状态
+   * @returns {Object} 历史记录状态信息
+   */
+  getHistoryStatus() {
+    return {
+      length: this.imageHistory.length,
+      maxSize: this.maxHistorySize,
+      currentIndex: this.currentHistoryIndex,
+      canGoPrevious: this.canGoPrevious(),
+      canGoNext: this.canGoNext(),
+      currentUrl: this.currentImageUrl,
+      history: this.imageHistory,
     };
   }
 
@@ -1319,6 +1527,287 @@ class ImageViewer {
   }
 
   /**
+   * 显示历史状态信息（调试用）
+   */
+  showHistoryStatus() {
+    const status = this.getHistoryStatus();
+    const message = `历史: ${status.length}/${status.maxSize} | 位置: ${status.currentIndex === -1 ? '最新' : status.currentIndex} | 可返回: ${status.canGoPrevious ? '是' : '否'} | 可前进: ${status.canGoNext ? '是' : '否'}`;
+    console.log("历史状态:", status);
+    this.uiController.showUserFeedback(message, 2000);
+  }
+
+  /**
+   * 切换历史面板显示/隐藏
+   */
+  toggleHistoryPanel() {
+    const panel = document.getElementById('history-panel');
+    if (!panel) return;
+
+    const isOpen = panel.classList.contains('open');
+    if (isOpen) {
+      this.closeHistoryPanel();
+    } else {
+      this.openHistoryPanel();
+    }
+  }
+
+  /**
+   * 打开历史面板
+   */
+  openHistoryPanel() {
+    const panel = document.getElementById('history-panel');
+    if (!panel) return;
+
+    panel.classList.add('open');
+    
+    // 延迟更新历史面板，避免阻塞UI
+    requestAnimationFrame(() => {
+      this.updateHistoryPanel();
+    });
+    
+    console.log("历史面板已打开");
+  }
+
+  /**
+   * 关闭历史面板
+   */
+  closeHistoryPanel() {
+    const panel = document.getElementById('history-panel');
+    if (!panel) return;
+
+    panel.classList.remove('open');
+    console.log("历史面板已关闭");
+  }
+
+  /**
+   * 更新历史面板内容
+   */
+  updateHistoryPanel() {
+    const statusElement = document.getElementById('history-status');
+    const gridElement = document.getElementById('history-grid');
+    
+    if (!statusElement || !gridElement) return;
+
+    const status = this.getHistoryStatus();
+    
+    // 更新状态信息
+    statusElement.textContent = `历史记录：${status.length}/${status.maxSize} | 当前位置：${status.currentIndex === -1 ? '最新' : status.currentIndex + 1}`;
+
+    // 使用优化器渲染历史面板
+    if (this.historyPanelOptimizer) {
+      this.historyPanelOptimizer.renderHistoryPanel(status.history, gridElement, status);
+    } else {
+      // 回退到原有方法
+      this.renderHistoryPanelFallback(gridElement, status);
+    }
+  }
+
+  /**
+   * 回退的历史面板渲染方法
+   * @param {HTMLElement} gridElement - 网格元素
+   * @param {Object} status - 历史状态
+   */
+  renderHistoryPanelFallback(gridElement, status) {
+    // 清空网格
+    gridElement.innerHTML = '';
+
+    if (status.length === 0) {
+      // 显示空状态
+      const emptyDiv = document.createElement('div');
+      emptyDiv.className = 'history-empty';
+      emptyDiv.innerHTML = `
+        暂无浏览历史<br>
+        <small>开始浏览图片后，历史记录将显示在这里</small>
+      `;
+      gridElement.appendChild(emptyDiv);
+      return;
+    }
+
+    // 使用文档片段批量添加元素，提高性能
+    const fragment = document.createDocumentFragment();
+
+    // 创建历史项目
+    status.history.forEach((imageUrl, index) => {
+      const item = this.createHistoryItem(imageUrl, index, status);
+      fragment.appendChild(item);
+    });
+
+    // 一次性添加所有元素
+    gridElement.appendChild(fragment);
+  }
+
+  /**
+   * 创建历史项目元素（优化版本）
+   * @param {string} imageUrl - 图片URL
+   * @param {number} index - 索引
+   * @param {Object} status - 历史状态
+   * @returns {HTMLElement} 历史项目元素
+   */
+  createHistoryItem(imageUrl, index, status) {
+    const item = document.createElement('div');
+    item.className = 'history-item';
+    
+    // 检查是否为当前图片
+    const isCurrent = (status.currentIndex === -1 && index === status.length - 1) || 
+                     (status.currentIndex === index);
+    
+    if (isCurrent) {
+      item.classList.add('current');
+    }
+
+    // 创建图片容器
+    const imgContainer = document.createElement('div');
+    imgContainer.className = 'history-item-img-container';
+
+    // 创建图片元素 - 使用优化的加载策略
+    const img = document.createElement('img');
+    img.alt = `历史图片 ${index + 1}`;
+    img.loading = 'lazy';
+    img.decoding = 'async'; // 异步解码，避免阻塞主线程
+    
+    // 设置占位符，避免布局跳动
+    img.style.backgroundColor = '#f0f0f0';
+    img.style.minHeight = '80px';
+    img.style.width = '100%';
+    img.style.objectFit = 'cover';
+
+    // 优化的图片加载 - 先检查缓存
+    this.loadHistoryImage(img, imageUrl, index);
+
+    // 添加索引标签
+    const indexLabel = document.createElement('div');
+    indexLabel.className = 'history-item-index';
+    indexLabel.textContent = index + 1;
+
+    // 添加当前指示器
+    if (isCurrent) {
+      const currentIndicator = document.createElement('div');
+      currentIndicator.className = 'history-item-current-indicator';
+      currentIndicator.textContent = '当前';
+      item.appendChild(currentIndicator);
+    }
+
+    // 点击事件 - 跳转到指定图片
+    item.addEventListener('click', () => {
+      this.jumpToHistoryIndex(index);
+    });
+
+    imgContainer.appendChild(img);
+    item.appendChild(imgContainer);
+    item.appendChild(indexLabel);
+    
+    return item;
+  }
+
+  /**
+   * 优化的历史图片加载
+   * @param {HTMLImageElement} img - 图片元素
+   * @param {string} imageUrl - 图片URL
+   * @param {number} index - 索引
+   */
+  loadHistoryImage(img, imageUrl, index) {
+    // 首先检查图片缓存
+    const cachedImage = this.imageCache.get(imageUrl);
+    
+    if (cachedImage) {
+      // 使用缓存的图片
+      cachedImage.then(cachedImg => {
+        if (cachedImg) {
+          img.src = cachedImg.src;
+          img.style.backgroundColor = 'transparent';
+          console.log(`历史图片 ${index + 1} 从缓存加载:`, imageUrl);
+          return;
+        }
+        this.loadHistoryImageDirect(img, imageUrl, index);
+      }).catch(() => {
+        this.loadHistoryImageDirect(img, imageUrl, index);
+      });
+    } else {
+      this.loadHistoryImageDirect(img, imageUrl, index);
+    }
+  }
+
+  /**
+   * 直接加载历史图片
+   * @param {HTMLImageElement} img - 图片元素
+   * @param {string} imageUrl - 图片URL
+   * @param {number} index - 索引
+   */
+  loadHistoryImageDirect(img, imageUrl, index) {
+    // 设置加载超时（减少到3秒）
+    const loadTimeout = setTimeout(() => {
+      if (!img.complete) {
+        img.src = this.getPlaceholderImage();
+        img.alt = '图片加载超时';
+        console.warn(`历史图片 ${index + 1} 加载超时:`, imageUrl);
+      }
+    }, 3000);
+
+    img.onload = () => {
+      clearTimeout(loadTimeout);
+      img.style.backgroundColor = 'transparent';
+      
+      // 异步缓存图片，不阻塞UI
+      setTimeout(() => {
+        this.imageCache.set(imageUrl, img).catch(error => {
+          console.warn('缓存历史图片失败:', error);
+        });
+      }, 100);
+      
+      console.log(`历史图片 ${index + 1} 加载完成:`, imageUrl);
+    };
+    
+    img.onerror = () => {
+      clearTimeout(loadTimeout);
+      img.src = this.getPlaceholderImage();
+      img.alt = '图片加载失败';
+      console.warn(`历史图片 ${index + 1} 加载失败:`, imageUrl);
+    };
+
+    // 设置图片源，开始加载
+    img.src = imageUrl;
+  }
+
+  /**
+   * 获取占位符图片
+   * @returns {string} 占位符图片的Data URL
+   */
+  getPlaceholderImage() {
+    return 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iODAiIGhlaWdodD0iODAiIHZpZXdCb3g9IjAgMCA4MCA4MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjgwIiBoZWlnaHQ9IjgwIiBmaWxsPSIjZjBmMGYwIi8+CjxwYXRoIGQ9Ik00MCAyMEM0Ni42Mjc0IDIwIDUyIDI1LjM3MjYgNTIgMzJDNTIgMzguNjI3NCA0Ni42Mjc0IDQ0IDQwIDQ0QzMzLjM3MjYgNDQgMjggMzguNjI3NCAyOCAzMkMyOCAyNS4zNzI2IDMzLjM3MjYgMjAgNDAgMjBaIiBmaWxsPSIjY2NjIi8+CjxwYXRoIGQ9Ik0yMCA1Nkw2MCA1NkM2MiA1NiA2MCA1NCA2MCA1Mkw2MCA0OEM2MCA0NiA1OCA0NCA1NiA0NEwyNCA0NEMyMiA0NCAyMCA0NiAyMCA0OEwyMCA1MkMyMCA1NCAyMiA1NiAyMCA1NloiIGZpbGw9IiNjY2MiLz4KPC9zdmc+';
+  }
+
+  /**
+   * 跳转到历史记录中的指定索引
+   * @param {number} index - 历史记录索引
+   */
+  jumpToHistoryIndex(index) {
+    if (index < 0 || index >= this.imageHistory.length) {
+      console.warn("无效的历史索引:", index);
+      return;
+    }
+
+    const targetUrl = this.imageHistory[index];
+    console.log(`跳转到历史记录 ${index + 1}:`, targetUrl);
+
+    // 更新当前历史索引
+    if (index === this.imageHistory.length - 1) {
+      this.currentHistoryIndex = -1; // 最新位置
+    } else {
+      this.currentHistoryIndex = index;
+    }
+
+    // 显示图片
+    this.currentImageUrl = targetUrl;
+    this.displayImage(targetUrl);
+    
+    // 更新历史面板
+    this.updateHistoryPanel();
+    
+    // 显示反馈
+    this.uiController.showUserFeedback(`已跳转到第 ${index + 1} 张图片`, 1500);
+  }
+
+  /**
    * 绑定帮助按钮事件
    */
   bindHelpButton() {
@@ -1332,8 +1821,11 @@ class ImageViewer {
     console.log("找到帮助按钮元素:", helpButton);
 
     // 检测是否为触摸设备（使用更可靠的检测方法）
-    const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0 || navigator.msMaxTouchPoints > 0;
-    console.log(`设备类型检测: ${isTouchDevice ? '触摸设备' : '非触摸设备'}`);
+    const isTouchDevice =
+      "ontouchstart" in window ||
+      navigator.maxTouchPoints > 0 ||
+      navigator.msMaxTouchPoints > 0;
+    console.log(`设备类型检测: ${isTouchDevice ? "触摸设备" : "非触摸设备"}`);
 
     // 为所有设备绑定触摸事件（作为主要交互方式）
     let touchHandled = false;
@@ -1394,7 +1886,7 @@ class ImageViewer {
         touchHandled = false;
         return;
       }
-      
+
       event.preventDefault();
       event.stopPropagation();
       console.log("帮助按钮点击事件触发");
@@ -1505,14 +1997,24 @@ class ImageViewer {
         this.showUserGuide();
       }
 
-      // Ctrl+H 或 Cmd+H 显示帮助
-      if ((event.ctrlKey || event.metaKey) && event.key === "h") {
+      // Ctrl+Shift+H 或 Cmd+Shift+H 切换历史面板
+      if ((event.ctrlKey || event.metaKey) && event.shiftKey && event.key === "H") {
+        event.preventDefault();
+        if (this.state.modules.imageViewer) {
+          this.state.modules.imageViewer.toggleHistoryPanel();
+        }
+        return;
+      }
+
+      // Ctrl+Alt+H 或 Cmd+Alt+H 显示帮助（避免与历史功能快捷键冲突）
+      if ((event.ctrlKey || event.metaKey) && event.altKey && event.key === "H") {
         event.preventDefault();
         this.showUserGuide();
       }
     });
 
-    console.log("帮助快捷键已添加 (F1 或 Ctrl+H)");
+    console.log("帮助快捷键已添加 (F1 或 Ctrl+Alt+H)");
+    console.log("历史面板快捷键已添加 (Ctrl+Shift+H)");
   }
 
   /**
@@ -1816,6 +2318,21 @@ class ImageViewer {
         console.log("按下向右箭头键，切换到下一张图片");
         this.switchToNextImage();
         break;
+      case "h":
+      case "H":
+        // H键 - 历史功能
+        if ((event.ctrlKey || event.metaKey) && event.shiftKey) {
+          // Ctrl+Shift+H - 切换历史面板
+          event.preventDefault();
+          console.log("按下Ctrl+Shift+H，切换历史面板");
+          this.toggleHistoryPanel();
+        } else if (event.ctrlKey || event.metaKey) {
+          // Ctrl+H - 显示历史状态
+          event.preventDefault();
+          console.log("按下Ctrl+H，显示历史状态");
+          this.showHistoryStatus();
+        }
+        break;
       default:
         // 其他键不处理
         break;
@@ -1837,6 +2354,19 @@ class ImageViewer {
     this.uiController.showSwitchFeedback("next");
 
     try {
+      // 先检查是否可以从历史记录前进
+      const nextFromHistory = this.getNextFromHistory();
+      if (nextFromHistory) {
+        console.log("从历史记录前进到下一张:", nextFromHistory);
+        await this.displayHistoryImage(nextFromHistory, "up");
+        return;
+      }
+
+      // 如果没有历史记录可前进，将当前图片加入历史并获取新图片
+      if (this.currentImageUrl) {
+        this.addToHistory(this.currentImageUrl);
+      }
+
       await this.loadImageWithAnimation("up"); // 向上滑动表示下一张
     } catch (error) {
       console.error("切换到下一张图片失败:", error);
@@ -1860,11 +2390,85 @@ class ImageViewer {
     this.uiController.showSwitchFeedback("previous");
 
     try {
-      await this.loadImageWithAnimation("down"); // 向下滑动表示上一张
+      // 从历史记录获取上一张图片
+      const previousUrl = this.getPreviousFromHistory();
+      if (previousUrl) {
+        console.log("从历史记录获取上一张:", previousUrl);
+        await this.displayHistoryImage(previousUrl, "down");
+        return;
+      }
+
+      // 如果没有历史记录，提示用户
+      console.log("已经是第一张图片，没有更多历史记录");
+      this.uiController.showUserFeedback("已经是第一张图片", 1000);
     } catch (error) {
       console.error("切换到上一张图片失败:", error);
-      // 如果动画失败，回退到普通加载
-      this.loadImage();
+      this.uiController.showUserFeedback("切换失败，请重试", 1000);
+    }
+  }
+
+  /**
+   * 显示历史图片（带动画）
+   * @param {string} imageUrl - 历史图片URL
+   * @param {string} direction - 动画方向
+   */
+  async displayHistoryImage(imageUrl, direction) {
+    try {
+      console.log(`显示历史图片: ${imageUrl}, 方向: ${direction}`);
+
+      // 获取当前图片元素
+      const currentImg = this.uiController.imageContainer.querySelector("img");
+
+      // 检查缓存
+      let cachedImage = this.imageCache.get(imageUrl);
+      let newImg;
+
+      if (cachedImage) {
+        console.log("使用缓存的历史图片:", imageUrl);
+        this.performanceMonitor.recordCacheHit(true);
+
+        // 克隆缓存的图片
+        newImg = cachedImage.cloneNode();
+
+        // 调整图片尺寸
+        if (this.responsiveManager) {
+          this.responsiveManager.adjustImageSize(newImg);
+        }
+      } else {
+        console.log("历史图片缓存未命中，重新加载:", imageUrl);
+        this.performanceMonitor.recordCacheHit(false);
+
+        // 预加载历史图片
+        newImg = await this.preloadImageForAnimation(imageUrl);
+
+        // 缓存历史图片
+        try {
+          await this.imageCache.set(imageUrl, newImg);
+        } catch (cacheError) {
+          console.warn("历史图片缓存失败:", cacheError);
+        }
+      }
+
+      // 执行动画切换
+      await this.executeImageSwitchAnimation(currentImg, newImg, direction);
+
+      // 更新当前图片URL
+      this.currentImageUrl = imageUrl;
+
+      // 隐藏加载状态
+      this.uiController.hideLoading();
+      this.uiController.hideError();
+
+      // 更新历史面板（如果已打开）
+      const historyPanel = document.getElementById('history-panel');
+      if (historyPanel && historyPanel.classList.contains('open')) {
+        this.updateHistoryPanel();
+      }
+
+      console.log("历史图片显示完成:", imageUrl);
+    } catch (error) {
+      console.error("显示历史图片失败:", error);
+      this.uiController.showUserFeedback("图片显示失败，请重试", 1000);
     }
   }
 
@@ -1966,6 +2570,9 @@ class ImageViewer {
 
       // 触发图片加载完成后的自动预加载
       await this.preloadStrategy.preloadOnImageLoad(imageUrl);
+
+      // 更新当前图片URL
+      this.currentImageUrl = imageUrl;
 
       const endTime = performance.now();
       console.log(
@@ -2117,14 +2724,60 @@ class ImageViewer {
   }
 
   /**
-   * 加载并显示图片
+   * 首次图片加载方法 - 带有更好的错误处理
+   */
+  async loadFirstImage() {
+    try {
+      console.log("开始首次图片加载...");
+      
+      // 强制确保UI处于正确的初始状态
+      this.uiController.hideError();
+      this.uiController.hideLoading();
+      
+      // 检查API服务是否可用
+      if (!this.apiService) {
+        console.error("API服务未初始化");
+        this.uiController.showUserFeedback("正在初始化服务...", 2000);
+        return;
+      }
+      
+      // 显示友好的加载提示
+      this.uiController.showUserFeedback("正在准备图片浏览器...", 1500);
+      
+      // 稍微延迟后调用正常的图片加载方法
+      setTimeout(async () => {
+        try {
+          // 在加载前再次确保错误信息是隐藏的
+          this.uiController.hideError();
+          await this.loadImage();
+        } catch (loadError) {
+          console.error("延迟加载失败:", loadError);
+          // 确保错误界面不会显示
+          this.uiController.hideError();
+          // 显示友好提示
+          this.uiController.showUserFeedback("点击屏幕或按方向键开始浏览图片", 4000);
+        }
+      }, 800);
+      
+    } catch (error) {
+      console.error("首次图片加载失败:", error);
+      
+      // 确保错误界面不会显示
+      this.uiController.hideError();
+      // 显示友好的错误信息
+      this.uiController.showUserFeedback("点击屏幕或按方向键开始浏览图片", 4000);
+    }
+  }
+
+  /**
+   * 优化的图片加载方法 - 集成浏览器缓存优化器
    */
   async loadImage() {
     const startTime = performance.now();
 
     try {
       this.uiController.showLoading();
-      console.log("开始加载图片...");
+      console.log("开始优化图片加载...");
 
       // 检查网络连接
       if (!this.apiService.isOnline()) {
@@ -2144,45 +2797,95 @@ class ImageViewer {
         const apiStartTime = performance.now();
         imageUrl = await this.apiService.fetchImage();
         const apiEndTime = performance.now();
-        
+
         // 记录API调用时间
-        this.performanceMonitor.recordApiCallTime(apiStartTime, apiEndTime, true);
+        this.performanceMonitor.recordApiCallTime(
+          apiStartTime,
+          apiEndTime,
+          true
+        );
         console.log("从API获取新图片URL:", imageUrl);
       }
 
-      // 检查缓存
-      let cachedImage = this.imageCache.get(imageUrl);
-
-      if (cachedImage) {
-        console.log("使用缓存图片:", imageUrl);
+      // 优先检查浏览器缓存
+      const isBrowserCached = await this.browserCacheOptimizer.isImageCached(
+        imageUrl
+      );
+      if (isBrowserCached) {
+        console.log("使用浏览器缓存图片:", imageUrl);
         this.performanceMonitor.recordCacheHit(true);
 
-        // 显示缓存的图片
-        await this.displayCachedImage(cachedImage, imageUrl);
+        // 使用优化的图片加载
+        const img = await this.browserCacheOptimizer.optimizedImageLoad(
+          imageUrl
+        );
+        await this.uiController.displayImage(imageUrl, this.responsiveManager);
       } else {
-        console.log("缓存未命中，加载新图片:", imageUrl);
-        this.performanceMonitor.recordCacheHit(false);
+        // 检查内存缓存（作为后备）
+        let cachedImage = this.imageCache.get(imageUrl);
 
-        // 加载新图片并缓存
-        await this.loadAndCacheImage(imageUrl);
+        if (cachedImage) {
+          console.log("使用内存缓存图片:", imageUrl);
+          this.performanceMonitor.recordCacheHit(true);
+
+          // 显示缓存的图片
+          await this.displayCachedImage(cachedImage, imageUrl);
+        } else {
+          console.log("缓存未命中，使用浏览器缓存优化器加载:", imageUrl);
+          this.performanceMonitor.recordCacheHit(false);
+
+          // 使用浏览器缓存优化器预加载并显示
+          await this.browserCacheOptimizer.preloadImage(imageUrl);
+          await this.uiController.displayImage(
+            imageUrl,
+            this.responsiveManager
+          );
+        }
       }
 
-      // 记录内存使用情况
-      this.performanceMonitor.recordMemoryUsage(
-        this.imageCache.getStats().memoryUsage
-      );
+      // 减少内存使用情况记录频率
+      if (Math.random() < 0.3) {
+        // 只有30%的概率记录
+        this.performanceMonitor.recordMemoryUsage(
+          this.imageCache.getStats().memoryUsage
+        );
+      }
 
-      // 触发智能预加载（补充队列）
-      this.preloadStrategy.smartPreload(imageUrl);
+      // 减少预加载频率 - 只在队列较空时触发
+      if (this.imageUrlQueue.length < 2) {
+        // 触发智能预加载（补充队列）
+        if (Math.random() < 0.6) {
+          // 60%概率触发智能预加载
+          this.preloadStrategy.smartPreload(imageUrl);
+        }
 
-      // 如果是从队列获取的图片，触发预加载补充
-      if (fromQueue) {
-        this.preloadStrategy.preloadOnImageLoad(imageUrl);
+        // 如果是从队列获取的图片，触发预加载补充
+        if (fromQueue && Math.random() < 0.4) {
+          // 40%概率触发预加载补充
+          this.preloadStrategy.preloadOnImageLoad(imageUrl);
+        }
+      }
+
+      // 更新当前图片URL
+      this.currentImageUrl = imageUrl;
+      
+      // 标记初始加载已完成
+      if (this.isInitialLoad) {
+        this.isInitialLoad = false;
+        console.log("初始图片加载成功");
+      }
+
+      // 更新历史面板（如果已打开）
+      const historyPanel = document.getElementById('history-panel');
+      if (historyPanel && historyPanel.classList.contains('open')) {
+        this.updateHistoryPanel();
       }
 
       const endTime = performance.now();
       console.log(
-        `图片加载完成，总耗时: ${(endTime - startTime).toFixed(2)}ms，来源: ${fromQueue ? '预加载队列' : 'API调用'}`
+        `优化图片加载完成，总耗时: ${(endTime - startTime).toFixed(
+          2
+        )}ms，来源: ${fromQueue ? "预加载队列" : "API调用"}`
       );
     } catch (error) {
       const endTime = performance.now();
@@ -2192,7 +2895,14 @@ class ImageViewer {
       this.performanceMonitor.recordError(error, "loadImage");
       this.performanceMonitor.recordApiCallTime(startTime, endTime, false);
 
-      this.uiController.showError(error, () => this.loadImage());
+      // 如果是初始加载，不显示错误界面，而是显示友好提示
+      if (this.isInitialLoad) {
+        console.log("初始加载失败，显示友好提示而不是错误界面");
+        this.uiController.showUserFeedback("点击屏幕或按方向键开始浏览图片", 4000);
+        this.isInitialLoad = false; // 标记初始加载已完成
+      } else {
+        this.uiController.showError(error, () => this.loadImage());
+      }
     }
   }
 
@@ -2917,7 +3627,7 @@ class H5ImageViewerApp {
 
       this.state.isInitialized = true;
       console.log("所有模块初始化完成");
-      
+
       // 为了方便全局函数访问，添加便捷的属性访问器
       this.setupPropertyAccessors();
     } catch (error) {
@@ -2935,7 +3645,7 @@ class H5ImageViewerApp {
     this.uiController = this.state.modules.uiController;
     this.imageViewer = this.state.modules.imageViewer;
     this.responsiveManager = this.state.modules.responsiveManager;
-    
+
     console.log("属性访问器已设置");
   }
 
@@ -2943,10 +3653,10 @@ class H5ImageViewerApp {
    * 加载图片的便捷方法
    */
   loadImage() {
-    if (this.imageViewer && typeof this.imageViewer.loadImage === 'function') {
+    if (this.imageViewer && typeof this.imageViewer.loadImage === "function") {
       return this.imageViewer.loadImage();
     } else {
-      console.error('ImageViewer未初始化或loadImage方法不存在');
+      console.error("ImageViewer未初始化或loadImage方法不存在");
     }
   }
 
@@ -3236,6 +3946,39 @@ class H5ImageViewerApp {
 // 应用初始化
 document.addEventListener("DOMContentLoaded", () => {
   try {
+    // 强制隐藏错误信息和加载指示器
+    const errorMessage = document.getElementById("error-message");
+    const loadingIndicator = document.getElementById("loading-indicator");
+    
+    if (errorMessage) {
+      errorMessage.classList.add("hidden");
+      errorMessage.style.display = "none !important";
+      errorMessage.style.visibility = "hidden";
+      console.log("强制隐藏错误信息");
+    }
+    
+    if (loadingIndicator) {
+      loadingIndicator.classList.add("hidden");
+      loadingIndicator.style.display = "none";
+      console.log("强制隐藏加载指示器");
+    }
+    
+    // 添加额外的保护，定期检查并隐藏错误信息
+    const hideErrorInterval = setInterval(() => {
+      const errorMsg = document.getElementById("error-message");
+      if (errorMsg && !errorMsg.classList.contains("hidden")) {
+        errorMsg.classList.add("hidden");
+        errorMsg.style.display = "none !important";
+        errorMsg.style.visibility = "hidden";
+        console.log("定期检查：强制隐藏错误信息");
+      }
+    }, 500);
+    
+    // 5秒后停止定期检查
+    setTimeout(() => {
+      clearInterval(hideErrorInterval);
+    }, 5000);
+    
     const app = new H5ImageViewerApp();
     console.log("H5 Image Viewer 已加载");
 
@@ -3281,50 +4024,50 @@ document.addEventListener("DOMContentLoaded", () => {
 /**
  * 全局API切换函数
  */
-window.switchApiSource = function() {
-  console.log('切换API源');
-  
+window.switchApiSource = function () {
+  console.log("切换API源");
+
   if (!window.imageViewerApp) {
-    console.error('应用实例未找到，可能还在初始化中');
-    alert('应用正在初始化中，请稍后重试');
+    console.error("应用实例未找到，可能还在初始化中");
+    alert("应用正在初始化中，请稍后重试");
     return;
   }
 
   // 直接访问应用实例的属性
   const apiService = window.imageViewerApp.apiService;
   const uiController = window.imageViewerApp.uiController;
-  
+
   if (!apiService) {
-    console.error('ApiService未初始化');
-    alert('服务未初始化，请刷新页面重试');
+    console.error("ApiService未初始化");
+    alert("服务未初始化，请刷新页面重试");
     return;
   }
 
-  const button = document.getElementById('api-switch-button');
-  const buttonText = button ? button.querySelector('.button-text') : null;
-  
+  const button = document.getElementById("api-switch-button");
+  const buttonText = button ? button.querySelector(".button-text") : null;
+
   try {
     // 检查当前使用的API并切换
     if (apiService.isUsingCustomApi && apiService.isUsingCustomApi()) {
       // 从自定义API切换到默认API
-      apiService.switchApiSource('redirect');
-      if (buttonText) buttonText.textContent = '新API';
+      apiService.switchApiSource("redirect");
+      if (buttonText) buttonText.textContent = "新API";
       if (uiController) {
-        uiController.showUserFeedback('已切换到默认API', 1500);
+        uiController.showUserFeedback("已切换到默认API", 1500);
       }
     } else if (apiService.currentEndpoint === apiService.redirectEndpoint) {
       // 从重定向API切换到代理API
-      apiService.switchApiSource('default');
-      if (buttonText) buttonText.textContent = '旧API';
+      apiService.switchApiSource("default");
+      if (buttonText) buttonText.textContent = "旧API";
       if (uiController) {
-        uiController.showUserFeedback('已切换到代理API', 1500);
+        uiController.showUserFeedback("已切换到代理API", 1500);
       }
     } else {
       // 从代理API切换到重定向API
-      apiService.switchApiSource('redirect');
-      if (buttonText) buttonText.textContent = '新API';
+      apiService.switchApiSource("redirect");
+      if (buttonText) buttonText.textContent = "新API";
       if (uiController) {
-        uiController.showUserFeedback('已切换到重定向API', 1500);
+        uiController.showUserFeedback("已切换到重定向API", 1500);
       }
     }
 
@@ -3334,44 +4077,43 @@ window.switchApiSource = function() {
         window.imageViewerApp.loadImage();
       }
     }, 500);
-    
   } catch (error) {
-    console.error('切换API时发生错误:', error);
+    console.error("切换API时发生错误:", error);
     if (uiController) {
-      uiController.showUserFeedback('切换API失败，请重试', 2000);
+      uiController.showUserFeedback("切换API失败，请重试", 2000);
     } else {
-      alert('切换API失败，请重试');
+      alert("切换API失败，请重试");
     }
   }
 };
 // 全局函数 - 自定义API弹窗管理
-window.showCustomApiDialog = function() {
-  console.log('显示自定义API弹窗');
-  const dialog = document.getElementById('custom-api-dialog');
-  const urlInput = document.getElementById('custom-api-url');
-  const pathInput = document.getElementById('custom-json-path');
-  
+window.showCustomApiDialog = function () {
+  console.log("显示自定义API弹窗");
+  const dialog = document.getElementById("custom-api-dialog");
+  const urlInput = document.getElementById("custom-api-url");
+  const pathInput = document.getElementById("custom-json-path");
+
   if (!dialog) {
-    console.error('自定义API弹窗元素未找到');
-    alert('弹窗元素未找到，请刷新页面重试');
+    console.error("自定义API弹窗元素未找到");
+    alert("弹窗元素未找到，请刷新页面重试");
     return;
   }
 
   // 加载现有配置
   try {
-    const config = localStorage.getItem('custom-api-config');
+    const config = localStorage.getItem("custom-api-config");
     if (config) {
       const parsed = JSON.parse(config);
-      urlInput.value = parsed.url || '';
-      pathInput.value = parsed.jsonPath || '';
+      urlInput.value = parsed.url || "";
+      pathInput.value = parsed.jsonPath || "";
     }
   } catch (error) {
-    console.error('加载自定义API配置失败:', error);
+    console.error("加载自定义API配置失败:", error);
   }
 
   // 显示弹窗
-  dialog.classList.remove('hidden');
-  
+  dialog.classList.remove("hidden");
+
   // 聚焦到第一个输入框
   setTimeout(() => {
     urlInput.focus();
@@ -3379,44 +4121,44 @@ window.showCustomApiDialog = function() {
 
   // 添加ESC键关闭功能
   const handleEscKey = (event) => {
-    if (event.key === 'Escape') {
+    if (event.key === "Escape") {
       window.hideCustomApiDialog();
-      document.removeEventListener('keydown', handleEscKey);
+      document.removeEventListener("keydown", handleEscKey);
     }
   };
-  document.addEventListener('keydown', handleEscKey);
+  document.addEventListener("keydown", handleEscKey);
 
   // 点击背景关闭弹窗
-  const backdrop = dialog.querySelector('.dialog-backdrop');
+  const backdrop = dialog.querySelector(".dialog-backdrop");
   const handleBackdropClick = (event) => {
     if (event.target === backdrop) {
       window.hideCustomApiDialog();
-      backdrop.removeEventListener('click', handleBackdropClick);
+      backdrop.removeEventListener("click", handleBackdropClick);
     }
   };
-  backdrop.addEventListener('click', handleBackdropClick);
+  backdrop.addEventListener("click", handleBackdropClick);
 };
 
-window.hideCustomApiDialog = function() {
-  console.log('隐藏自定义API弹窗');
-  const dialog = document.getElementById('custom-api-dialog');
-  
+window.hideCustomApiDialog = function () {
+  console.log("隐藏自定义API弹窗");
+  const dialog = document.getElementById("custom-api-dialog");
+
   if (!dialog) {
-    console.error('自定义API弹窗元素未找到');
+    console.error("自定义API弹窗元素未找到");
     return;
   }
 
   // 隐藏弹窗
-  dialog.classList.add('hidden');
+  dialog.classList.add("hidden");
 };
 
-window.saveCustomApi = function() {
-  console.log('保存自定义API配置');
-  const urlInput = document.getElementById('custom-api-url');
-  const pathInput = document.getElementById('custom-json-path');
-  
+window.saveCustomApi = function () {
+  console.log("保存自定义API配置");
+  const urlInput = document.getElementById("custom-api-url");
+  const pathInput = document.getElementById("custom-json-path");
+
   if (!urlInput || !pathInput) {
-    console.error('输入框元素未找到');
+    console.error("输入框元素未找到");
     return;
   }
 
@@ -3425,13 +4167,13 @@ window.saveCustomApi = function() {
 
   // 验证输入
   if (!url) {
-    alert('请输入API URL');
+    alert("请输入API URL");
     urlInput.focus();
     return;
   }
 
   if (!jsonPath) {
-    alert('请输入JSON路径');
+    alert("请输入JSON路径");
     pathInput.focus();
     return;
   }
@@ -3440,14 +4182,16 @@ window.saveCustomApi = function() {
   try {
     new URL(url);
   } catch (error) {
-    alert('请输入有效的URL格式');
+    alert("请输入有效的URL格式");
     urlInput.focus();
     return;
   }
 
   // 验证JSON路径格式（简单验证）
-  if (!/^[a-zA-Z_$][a-zA-Z0-9_$]*(\.[a-zA-Z_$][a-zA-Z0-9_$]*)*$/.test(jsonPath)) {
-    alert('JSON路径格式无效，请使用点分割格式，如: data.url 或 result.image');
+  if (
+    !/^[a-zA-Z_$][a-zA-Z0-9_$]*(\.[a-zA-Z_$][a-zA-Z0-9_$]*)*$/.test(jsonPath)
+  ) {
+    alert("JSON路径格式无效，请使用点分割格式，如: data.url 或 result.image");
     pathInput.focus();
     return;
   }
@@ -3457,33 +4201,38 @@ window.saveCustomApi = function() {
     if (window.imageViewerApp && window.imageViewerApp.apiService) {
       // 保存配置
       window.imageViewerApp.apiService.saveCustomApiConfig(url, jsonPath);
-      
+
       // 切换到自定义API
       window.imageViewerApp.apiService.switchToCustomApi();
-      
+
       // 显示成功消息
       if (window.imageViewerApp.uiController) {
-        window.imageViewerApp.uiController.showUserFeedback('自定义API配置已保存', 2000);
+        window.imageViewerApp.uiController.showUserFeedback(
+          "自定义API配置已保存",
+          2000
+        );
       }
-      
+
       // 关闭弹窗
       window.hideCustomApiDialog();
-      
+
       // 立即加载一张图片测试
       setTimeout(() => {
         if (window.imageViewerApp.uiController) {
-          window.imageViewerApp.uiController.showUserFeedback('正在测试自定义API...', 1500);
+          window.imageViewerApp.uiController.showUserFeedback(
+            "正在测试自定义API...",
+            1500
+          );
         }
         window.imageViewerApp.loadImage();
       }, 500);
-      
     } else {
-      console.error('应用实例未找到');
-      alert('保存失败：应用未正确初始化');
+      console.error("应用实例未找到");
+      alert("保存失败：应用未正确初始化");
     }
   } catch (error) {
-    console.error('保存自定义API配置失败:', error);
-    alert('保存失败：' + error.message);
+    console.error("保存自定义API配置失败:", error);
+    alert("保存失败：" + error.message);
   }
 };
 

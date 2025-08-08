@@ -4,20 +4,26 @@
  */
 
 /**
- * 图片缓存管理器
+ * 优化的图片缓存管理器 - 使用浏览器原生缓存
  */
 class ImageCache {
   constructor(options = {}) {
-    this.maxCacheSize = options.maxCacheSize || 50; // 最大缓存数量
-    this.maxMemorySize = options.maxMemorySize || 100 * 1024 * 1024; // 100MB
+    // 大幅减少内存缓存，主要依赖浏览器缓存
+    this.maxCacheSize = options.maxCacheSize || 5; // 减少到5张
+    this.maxMemorySize = options.maxMemorySize || 20 * 1024 * 1024; // 减少到20MB
     this.cache = new Map();
     this.accessTimes = new Map();
     this.imageSizes = new Map();
     this.currentMemoryUsage = 0;
+    
+    // 新增：预加载队列管理
+    this.preloadQueue = new Set();
+    this.maxPreloadQueue = 3;
 
-    console.log("ImageCache 初始化完成", {
+    console.log("优化的ImageCache 初始化完成", {
       maxCacheSize: this.maxCacheSize,
       maxMemorySize: this.maxMemorySize,
+      strategy: "browser-native-cache"
     });
   }
 
@@ -82,21 +88,30 @@ class ImageCache {
   }
 
   /**
-   * 确保缓存空间足够
+   * 优化的缓存空间管理 - 更激进的清理策略
    * @param {number} requiredSize - 需要的空间大小
    */
   async ensureCacheSpace(requiredSize) {
-    // 检查数量限制
+    // 更激进的数量限制检查
     while (this.cache.size >= this.maxCacheSize) {
       this.removeLeastRecentlyUsed();
     }
 
-    // 检查内存限制
+    // 更严格的内存限制检查 - 保持更多空闲空间
+    const memoryThreshold = this.maxMemorySize * 0.7; // 使用70%阈值
     while (
-      this.currentMemoryUsage + requiredSize > this.maxMemorySize &&
+      this.currentMemoryUsage + requiredSize > memoryThreshold &&
       this.cache.size > 0
     ) {
       this.removeLeastRecentlyUsed();
+    }
+
+    // 如果预加载队列过大，也要清理
+    if (this.preloadQueue.size > this.maxPreloadQueue) {
+      console.log("预加载队列过大，清理部分项目");
+      const queueArray = Array.from(this.preloadQueue);
+      const toRemove = queueArray.slice(0, this.preloadQueue.size - this.maxPreloadQueue);
+      toRemove.forEach(url => this.preloadQueue.delete(url));
     }
   }
 
@@ -174,26 +189,57 @@ class ImageCache {
   }
 
   /**
-   * 预加载单个图片
+   * 优化的预加载单个图片 - 使用浏览器原生缓存
    * @param {string} url - 图片URL
    * @returns {Promise<HTMLImageElement>}
    */
   async preloadSingle(url) {
     return new Promise((resolve, reject) => {
+      // 检查预加载队列，避免重复预加载
+      if (this.preloadQueue.has(url)) {
+        console.log("图片已在预加载队列中，跳过:", url);
+        resolve(null);
+        return;
+      }
+
       // 检查是否已缓存
       if (this.cache.has(url)) {
         resolve(this.cache.get(url));
         return;
       }
 
+      // 添加到预加载队列
+      this.preloadQueue.add(url);
+
       const img = new Image();
+      
+      // 设置缓存策略，优先使用浏览器缓存
+      img.crossOrigin = "anonymous";
+      img.loading = "lazy"; // 使用懒加载
+      img.decoding = "async"; // 异步解码
+      
+      // 设置超时机制，避免长时间等待
+      const timeout = setTimeout(() => {
+        this.preloadQueue.delete(url);
+        reject(new Error(`预加载图片超时: ${url}`));
+      }, 8000); // 8秒超时
+      
       img.onload = async () => {
-        await this.set(url, img);
+        clearTimeout(timeout);
+        // 只有在内存允许的情况下才缓存
+        if (this.preloadQueue.size <= this.maxPreloadQueue) {
+          await this.set(url, img);
+        }
+        this.preloadQueue.delete(url);
         resolve(img);
       };
+      
       img.onerror = () => {
+        clearTimeout(timeout);
+        this.preloadQueue.delete(url);
         reject(new Error(`预加载图片失败: ${url}`));
       };
+      
       img.src = url;
     });
   }
@@ -206,8 +252,8 @@ class PreloadStrategy {
   constructor(apiService, imageCache, options = {}) {
     this.apiService = apiService;
     this.imageCache = imageCache;
-    this.preloadCount = options.preloadCount || 3; // 预加载数量
-    this.preloadDelay = options.preloadDelay || 1000; // 预加载延迟
+    this.preloadCount = options.preloadCount || 2; // 减少预加载数量
+    this.preloadDelay = options.preloadDelay || 2000; // 增加预加载延迟
     this.isPreloading = false;
     this.preloadQueue = [];
     this.preloadedUrls = new Set();
@@ -799,10 +845,10 @@ class EnhancedPreloadStrategy extends PreloadStrategy {
   constructor(apiService, imageCache, options = {}) {
     super(apiService, imageCache, options);
 
-    // 增强配置
-    this.adaptiveThreshold = options.adaptiveThreshold || 0.7; // 缓存命中率阈值
-    this.maxPreloadCount = options.maxPreloadCount || 8; // 最大预加载数量
-    this.minPreloadCount = options.minPreloadCount || 2; // 最小预加载数量
+    // 优化后的配置 - 减少预加载数量和频率
+    this.adaptiveThreshold = options.adaptiveThreshold || 0.8; // 提高缓存命中率阈值
+    this.maxPreloadCount = options.maxPreloadCount || 3; // 大幅减少最大预加载数量
+    this.minPreloadCount = options.minPreloadCount || 1; // 减少最小预加载数量
     this.priorityUrls = new Set(options.priorityUrls || []); // 优先预加载URL
     this.performanceMonitor = options.performanceMonitor; // 性能监控器
     this.imageViewer = options.imageViewer; // ImageViewer实例，用于访问队列
@@ -996,7 +1042,7 @@ class EnhancedPreloadStrategy extends PreloadStrategy {
   }
 
   /**
-   * 批量预加载指定数量的图片
+   * 优化的批量预加载 - 减少API调用频率
    * @param {number} count - 预加载数量
    */
   async preloadBatch(count) {
@@ -1007,14 +1053,18 @@ class EnhancedPreloadStrategy extends PreloadStrategy {
     this.isPreloading = true;
 
     try {
-      console.log("开始批量预加载:", count, "张图片");
+      console.log("开始优化批量预加载:", count, "张图片");
 
-      for (let i = 0; i < count; i++) {
+      // 限制批量预加载的最大数量
+      const maxBatchSize = 2;
+      const actualCount = Math.min(count, maxBatchSize);
+
+      for (let i = 0; i < actualCount; i++) {
         await this.preloadNext();
 
-        // 添加小延迟避免过于频繁的API调用
-        if (i < count - 1) {
-          await this.delay(this.preloadDelay / 2); // 批量预加载使用更短的延迟
+        // 增加延迟，减少API调用频率
+        if (i < actualCount - 1) {
+          await this.delay(this.preloadDelay); // 使用完整延迟
         }
       }
     } catch (error) {

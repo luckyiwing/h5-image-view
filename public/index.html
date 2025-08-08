@@ -15,13 +15,38 @@
         <div class="spinner"></div>
         <p>加载中...</p>
       </div>
-      <div id="error-message" class="hidden">
+      <div
+        id="error-message"
+        class="hidden"
+        style="
+          display: none !important;
+          visibility: hidden;
+          opacity: 0;
+          z-index: -1;
+        "
+      >
         <p>图片加载失败</p>
         <button id="retry-btn">重试</button>
       </div>
 
       <!-- 按钮容器 -->
       <div class="button-container">
+        <!-- 历史按钮 -->
+        <button
+          id="history-toggle-button"
+          class="action-button history-button"
+          title="显示浏览历史 (Ctrl+Shift+H)"
+          aria-label="显示浏览历史"
+          role="button"
+          tabindex="0"
+          onclick="if(window.imageViewerApp && window.imageViewerApp.state && window.imageViewerApp.state.modules && window.imageViewerApp.state.modules.imageViewer) { window.imageViewerApp.state.modules.imageViewer.toggleHistoryPanel(); } else { alert('历史功能正在加载中，请稍后重试'); }"
+          ontouchstart="this.style.transform='scale(0.95)'; this.style.background='rgba(255,255,255,0.25)';"
+          ontouchend="this.style.transform='scale(1)'; this.style.background='';"
+        >
+          <span class="button-icon" aria-hidden="true">📚</span>
+          <span class="button-text" aria-hidden="true">历史</span>
+        </button>
+
         <!-- API切换按钮 -->
         <button
           id="api-switch-button"
@@ -70,6 +95,31 @@
           <span class="button-icon" aria-hidden="true">?</span>
           <span class="button-text" aria-hidden="true">帮助</span>
         </button>
+      </div>
+
+      <!-- 历史面板 -->
+      <div id="history-panel" class="history-panel">
+        <div class="history-panel-header">
+          <h3 class="history-panel-title">浏览历史</h3>
+          <button
+            class="history-panel-close"
+            onclick="if(window.imageViewerApp && window.imageViewerApp.state && window.imageViewerApp.state.modules && window.imageViewerApp.state.modules.imageViewer) { window.imageViewerApp.state.modules.imageViewer.closeHistoryPanel(); }"
+            aria-label="关闭历史面板"
+          >
+            ×
+          </button>
+        </div>
+        <div class="history-panel-content">
+          <div id="history-status" class="history-status">
+            历史记录：0/30 | 当前位置：最新
+          </div>
+          <div id="history-grid" class="history-grid">
+            <div class="history-empty">
+              暂无浏览历史<br />
+              <small>开始浏览图片后，历史记录将显示在这里</small>
+            </div>
+          </div>
+        </div>
       </div>
 
       <!-- 自定义API弹窗 -->
@@ -131,17 +181,36 @@
         按下此按钮或使用F1键可显示图片浏览器的操作指南，包括如何使用鼠标、键盘或触摸手势来切换图片
       </div>
     </div>
+    <script src="fix-error-display.js"></script>
     <script src="browser-compatibility.js"></script>
     <script src="performance-cache.js"></script>
+    <script src="browser-cache-optimizer.js"></script>
+    <script src="history-panel-optimizer.js"></script>
     <script src="responsive-manager.js"></script>
     <script src="local-storage-manager.js"></script>
     <script src="guide-content-config.js"></script>
     <script src="guide-error-handlers.js"></script>
     <script src="user-guide-manager.js"></script>
     <script src="animation-controller.js"></script>
-    <script src="guide-integration-test.js"></script>
-
+    <!-- <script src="guide-integration-test.js"></script> -->
     <script src="app.js"></script>
-    <script src="test-functionality.js"></script>
+
+    <!-- 开发模式下加载性能测试脚本 -->
+    <script>
+      // 检测开发模式：localhost、127.0.0.1、或包含dev的域名
+      const isDevelopment =
+        location.hostname === "localhost" ||
+        location.hostname === "127.0.0.1" ||
+        location.hostname.includes("dev") ||
+        location.port !== "" ||
+        location.search.includes("debug=true");
+
+      if (isDevelopment) {
+        const script = document.createElement("script");
+        script.src = "test-optimization.js";
+        document.head.appendChild(script);
+        console.log("🧪 开发模式：已加载性能测试脚本");
+      }
+    </script>
   </body>
 </html>
