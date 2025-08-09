@@ -181,6 +181,7 @@
         按下此按钮或使用F1键可显示图片浏览器的操作指南，包括如何使用鼠标、键盘或触摸手势来切换图片
       </div>
     </div>
+    <!-- 保持现有的依赖脚本 -->
     <script src="fix-error-display.js"></script>
     <script src="browser-compatibility.js"></script>
     <script src="performance-cache.js"></script>
@@ -193,7 +194,12 @@
     <script src="user-guide-manager.js"></script>
     <script src="animation-controller.js"></script>
     <!-- <script src="guide-integration-test.js"></script> -->
-    <script src="app.js"></script>
+    
+    <!-- 模块化应用入口（现代浏览器） -->
+    <script type="module" src="js/main.js"></script>
+    
+    <!-- 备用的内联版本（不支持模块的浏览器） -->
+    <script nomodule src="app.js"></script>
 
     <!-- 开发模式下加载性能测试脚本 -->
     <script>
