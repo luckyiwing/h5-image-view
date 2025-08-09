@@ -104,14 +104,22 @@ class ApiService {
 
     for (let attempt = 1; attempt <= this.maxRetries; attempt++) {
       try {
+        // 为API URL添加随机参数以避免缓存
+        let apiUrl = this.currentEndpoint;
+        if (this.isUsingCustomApi()) {
+          // 为自定义API添加随机参数
+          const separator = apiUrl.includes('?') ? '&' : '?';
+          apiUrl = `${apiUrl}${separator}t=${Date.now()}&r=${Math.random().toString(36).substr(2, 9)}`;
+        }
+        
         console.log(
-          `API调用尝试 ${attempt}/${this.maxRetries} (端点: ${this.currentEndpoint})`
+          `API调用尝试 ${attempt}/${this.maxRetries} (端点: ${apiUrl})`
         );
 
         // 使用兼容的超时信号 - 减少到5秒
         const timeoutSignal = this.compatibility.createTimeoutSignal(5000);
 
-        const response = await fetch(this.currentEndpoint, {
+        const response = await fetch(apiUrl, {
           method: "GET",
           headers: {
             Accept: "application/json",
@@ -361,6 +369,10 @@ class ApiService {
         this.customEndpoint = parsed.url;
         this.customJsonPath = parsed.jsonPath;
         console.log("已加载自定义API配置:", parsed);
+        
+        // 自动切换到自定义API
+        this.switchToCustomApi();
+        console.log("已自动切换到自定义API");
       }
     } catch (error) {
       console.error("加载自定义API配置失败:", error);
@@ -416,6 +428,10 @@ class ApiService {
     }
 
     try {
+      // 调试：打印完整的API响应
+      console.log("API响应数据:", JSON.stringify(response, null, 2));
+      console.log("JSON路径:", jsonPath);
+
       // 支持简单的点分割路径，如 "data.url" 或 "result.image"
       const pathParts = jsonPath.split(".");
       let value = response;
@@ -427,18 +443,89 @@ class ApiService {
         value = value[part];
       }
 
-      if (typeof value !== "string") {
-        throw new Error(`JSON路径 "${jsonPath}" 指向的值不是字符串`);
+      // 如果原路径失败，尝试常见的嵌套路径
+      if (value === undefined && jsonPath === "pic") {
+        console.log("原路径失败，尝试常见的嵌套路径...");
+        const commonPaths = ["数据.pic", "data.pic", "result.pic", "response.pic"];
+        
+        for (const altPath of commonPaths) {
+          try {
+            const altPathParts = altPath.split(".");
+            let altValue = response;
+            
+            for (const part of altPathParts) {
+              if (altValue === null || altValue === undefined) {
+                break;
+              }
+              altValue = altValue[part];
+            }
+            
+            if (altValue && typeof altValue === "string") {
+              console.log(`找到有效路径: ${altPath}`);
+              value = altValue;
+              
+              // 自动更新配置中的JSON路径
+              if (this.customJsonPath === "pic") {
+                console.log("自动更新JSON路径配置");
+                this.customJsonPath = altPath;
+                this.saveCustomApiConfig(this.customEndpoint, altPath);
+              }
+              break;
+            }
+          } catch (e) {
+            // 继续尝试下一个路径
+          }
+        }
       }
+
+      // 调试：打印提取到的值和类型
+      console.log("提取到的值:", value);
+      console.log("值的类型:", typeof value);
+
+      // 如果值是数组，尝试获取第一个元素
+      if (Array.isArray(value) && value.length > 0) {
+        console.log("检测到数组，尝试获取第一个元素");
+        value = value[0];
+        console.log("数组第一个元素:", value, "类型:", typeof value);
+      }
+
+      // 如果值是对象，尝试查找常见的URL字段
+      if (typeof value === "object" && value !== null) {
+        console.log("检测到对象，尝试查找URL字段");
+        const urlFields = ['url', 'src', 'link', 'href', 'image', 'pic'];
+        for (const field of urlFields) {
+          if (value[field] && typeof value[field] === 'string') {
+            console.log(`在对象中找到URL字段 "${field}":`, value[field]);
+            value = value[field];
+            break;
+          }
+        }
+      }
+
+      // 如果值仍然不是字符串，尝试转换
+      if (typeof value !== "string") {
+        // 如果是数字，转换为字符串
+        if (typeof value === "number") {
+          console.log("将数字转换为字符串");
+          value = String(value);
+        } else {
+          throw new Error(`JSON路径 "${jsonPath}" 指向的值不是字符串，实际类型: ${typeof value}，值: ${JSON.stringify(value)}`);
+        }
+      }
+
+      // 处理转义字符，特别是 \/ 转义
+      const cleanedUrl = value.replace(/\\\//g, '/');
+      console.log("原始URL:", value);
+      console.log("处理后URL:", cleanedUrl);
 
       // 验证URL格式
       try {
-        new URL(value);
+        new URL(cleanedUrl);
       } catch {
-        throw new Error(`提取的值不是有效的URL: ${value}`);
+        throw new Error(`提取的值不是有效的URL: ${cleanedUrl}`);
       }
 
-      return value;
+      return cleanedUrl;
     } catch (error) {
       throw new Error(`从JSON中提取图片URL失败: ${error.message}`);
     }
@@ -4049,11 +4136,11 @@ window.switchApiSource = function () {
   try {
     // 检查当前使用的API并切换
     if (apiService.isUsingCustomApi && apiService.isUsingCustomApi()) {
-      // 从自定义API切换到默认API
+      // 从自定义API切换到重定向API（而不是直接禁用自定义API）
       apiService.switchApiSource("redirect");
       if (buttonText) buttonText.textContent = "新API";
       if (uiController) {
-        uiController.showUserFeedback("已切换到默认API", 1500);
+        uiController.showUserFeedback("已从自定义API切换到重定向API", 2000);
       }
     } else if (apiService.currentEndpoint === apiService.redirectEndpoint) {
       // 从重定向API切换到代理API
