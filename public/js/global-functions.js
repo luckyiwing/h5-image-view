@@ -218,11 +218,83 @@ window.saveCustomApi = function () {
  * 切换历史面板显示/隐藏
  */
 window.toggleHistoryPanel = function() {
-  if (window.imageViewerApp && window.imageViewerApp.imageViewer) {
-    window.imageViewerApp.imageViewer.toggleHistoryPanel();
-  } else {
-    console.error("ImageViewer实例未找到");
+  console.log("toggleHistoryPanel 被调用");
+  
+  // 检查应用实例是否存在
+  if (!window.imageViewerApp) {
+    console.error("应用实例未找到");
+    alert('应用正在加载中，请稍后重试');
+    return;
   }
+
+  // 尝试新的模块化结构访问路径
+  if (window.imageViewerApp.imageViewer && typeof window.imageViewerApp.imageViewer.toggleHistoryPanel === 'function') {
+    console.log("使用新的模块化结构访问路径");
+    window.imageViewerApp.imageViewer.toggleHistoryPanel();
+    return;
+  }
+
+  // 兼容旧的访问路径
+  if (window.imageViewerApp.state && 
+      window.imageViewerApp.state.modules && 
+      window.imageViewerApp.state.modules.imageViewer && 
+      typeof window.imageViewerApp.state.modules.imageViewer.toggleHistoryPanel === 'function') {
+    console.log("使用兼容的旧访问路径");
+    window.imageViewerApp.state.modules.imageViewer.toggleHistoryPanel();
+    return;
+  }
+
+  // 如果都找不到，尝试手动切换历史面板
+  console.warn("未找到toggleHistoryPanel方法，尝试手动切换");
+  const panel = document.getElementById('history-panel');
+  if (panel) {
+    const isOpen = panel.classList.contains('open');
+    if (isOpen) {
+      panel.classList.remove('open');
+      console.log("手动关闭历史面板");
+    } else {
+      panel.classList.add('open');
+      console.log("手动打开历史面板");
+    }
+  } else {
+    console.error("历史面板元素未找到");
+    alert('历史功能暂时不可用，请稍后重试');
+  }
+};
+
+/**
+ * 显示用户引导
+ */
+window.showUserGuide = function() {
+  console.log("showUserGuide 被调用");
+  
+  // 检查应用实例是否存在
+  if (!window.imageViewerApp) {
+    console.error("应用实例未找到");
+    alert('应用正在加载中，请稍后重试');
+    return;
+  }
+
+  // 尝试新的模块化结构访问路径
+  if (window.imageViewerApp.imageViewer && typeof window.imageViewerApp.imageViewer.handleHelpButtonClick === 'function') {
+    console.log("使用新的模块化结构访问路径");
+    window.imageViewerApp.imageViewer.handleHelpButtonClick();
+    return;
+  }
+
+  // 兼容旧的访问路径
+  if (window.imageViewerApp.state && 
+      window.imageViewerApp.state.modules && 
+      window.imageViewerApp.state.modules.imageViewer && 
+      typeof window.imageViewerApp.state.modules.imageViewer.handleHelpButtonClick === 'function') {
+    console.log("使用兼容的旧访问路径");
+    window.imageViewerApp.state.modules.imageViewer.handleHelpButtonClick();
+    return;
+  }
+
+  // 如果都找不到，显示简单的帮助信息
+  console.warn("未找到handleHelpButtonClick方法，显示简单帮助");
+  alert('操作指南：\n\n• 鼠标滚轮或方向键：切换图片\n• 触摸滑动：切换图片\n• 历史按钮：查看浏览历史\n• API按钮：切换图片源\n• 自定义按钮：设置自定义API');
 };
 
 /**

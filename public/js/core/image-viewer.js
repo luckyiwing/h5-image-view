@@ -771,6 +771,301 @@ export class ImageViewer {
   }
 
   /**
+   * 切换历史面板显示/隐藏
+   */
+  toggleHistoryPanel() {
+    const panel = document.getElementById('history-panel');
+    if (!panel) return;
+
+    const isOpen = panel.classList.contains('open');
+    if (isOpen) {
+      this.closeHistoryPanel();
+    } else {
+      this.openHistoryPanel();
+    }
+  }
+
+  /**
+   * 打开历史面板
+   */
+  openHistoryPanel() {
+    const panel = document.getElementById('history-panel');
+    if (!panel) return;
+
+    panel.classList.add('open');
+    
+    // 延迟更新历史面板，避免阻塞UI
+    requestAnimationFrame(() => {
+      this.updateHistoryPanel();
+    });
+    
+    console.log("历史面板已打开");
+  }
+
+  /**
+   * 关闭历史面板
+   */
+  closeHistoryPanel() {
+    const panel = document.getElementById('history-panel');
+    if (!panel) return;
+
+    panel.classList.remove('open');
+    console.log("历史面板已关闭");
+  }
+
+  /**
+   * 更新历史面板内容
+   */
+  updateHistoryPanel() {
+    const statusElement = document.getElementById('history-status');
+    const gridElement = document.getElementById('history-grid');
+    
+    if (!statusElement || !gridElement) return;
+
+    const status = this.getHistoryStatus();
+    
+    // 更新状态信息
+    statusElement.textContent = `历史记录：${status.length}/${status.maxSize} | 当前位置：${status.currentIndex === -1 ? '最新' : status.currentIndex + 1}`;
+
+    // 使用优化器渲染历史面板
+    if (this.historyPanelOptimizer) {
+      this.historyPanelOptimizer.renderHistoryPanel(status.history, gridElement, status);
+    } else {
+      // 回退到原有方法
+      this.renderHistoryPanelFallback(gridElement, status);
+    }
+  }
+
+  /**
+   * 回退的历史面板渲染方法
+   * @param {HTMLElement} gridElement - 网格元素
+   * @param {Object} status - 历史状态
+   */
+  renderHistoryPanelFallback(gridElement, status) {
+    // 清空网格
+    gridElement.innerHTML = '';
+
+    if (status.length === 0) {
+      // 显示空状态
+      const emptyDiv = document.createElement('div');
+      emptyDiv.className = 'history-empty';
+      emptyDiv.innerHTML = `
+        暂无浏览历史<br>
+        <small>开始浏览图片后，历史记录将显示在这里</small>
+      `;
+      gridElement.appendChild(emptyDiv);
+      return;
+    }
+
+    // 使用文档片段批量添加元素，提高性能
+    const fragment = document.createDocumentFragment();
+
+    // 创建历史项目
+    status.history.forEach((imageUrl, index) => {
+      const item = this.createHistoryItem(imageUrl, index, status);
+      fragment.appendChild(item);
+    });
+
+    // 一次性添加所有元素
+    gridElement.appendChild(fragment);
+  }
+
+  /**
+   * 创建历史项目元素
+   * @param {string} imageUrl - 图片URL
+   * @param {number} index - 索引
+   * @param {Object} status - 历史状态
+   * @returns {HTMLElement} 历史项目元素
+   */
+  createHistoryItem(imageUrl, index, status) {
+    const item = document.createElement('div');
+    item.className = 'history-item';
+    
+    // 检查是否为当前图片
+    const isCurrent = (status.currentIndex === -1 && index === status.length - 1) || 
+                     (status.currentIndex === index);
+    
+    if (isCurrent) {
+      item.classList.add('current');
+    }
+
+    // 创建图片容器
+    const imgContainer = document.createElement('div');
+    imgContainer.className = 'history-item-img-container';
+
+    // 创建图片元素
+    const img = document.createElement('img');
+    img.alt = `历史图片 ${index + 1}`;
+    img.loading = 'lazy';
+    img.decoding = 'async';
+    
+    // 设置占位符
+    img.style.backgroundColor = '#f0f0f0';
+    img.style.minHeight = '80px';
+    img.style.width = '100%';
+    img.style.objectFit = 'cover';
+
+    // 优化的图片加载
+    this.loadHistoryImage(img, imageUrl, index);
+
+    // 添加索引标签
+    const indexLabel = document.createElement('div');
+    indexLabel.className = 'history-item-index';
+    indexLabel.textContent = index + 1;
+
+    // 添加当前指示器
+    if (isCurrent) {
+      const currentIndicator = document.createElement('div');
+      currentIndicator.className = 'history-item-current-indicator';
+      currentIndicator.textContent = '当前';
+      item.appendChild(currentIndicator);
+    }
+
+    // 点击事件 - 跳转到指定图片
+    item.addEventListener('click', () => {
+      this.jumpToHistoryIndex(index);
+    });
+
+    imgContainer.appendChild(img);
+    item.appendChild(imgContainer);
+    item.appendChild(indexLabel);
+    
+    return item;
+  }
+
+  /**
+   * 优化的历史图片加载
+   * @param {HTMLImageElement} img - 图片元素
+   * @param {string} imageUrl - 图片URL
+   * @param {number} index - 索引
+   */
+  loadHistoryImage(img, imageUrl, index) {
+    // 首先检查图片缓存
+    const cachedImage = this.imageCache?.get(imageUrl);
+    
+    if (cachedImage) {
+      cachedImage.then(cachedImg => {
+        if (cachedImg) {
+          img.src = cachedImg.src;
+          img.style.backgroundColor = 'transparent';
+          console.log(`历史图片 ${index + 1} 从缓存加载:`, imageUrl);
+          return;
+        }
+        this.loadHistoryImageDirect(img, imageUrl, index);
+      }).catch(() => {
+        this.loadHistoryImageDirect(img, imageUrl, index);
+      });
+    } else {
+      this.loadHistoryImageDirect(img, imageUrl, index);
+    }
+  }
+
+  /**
+   * 直接加载历史图片
+   * @param {HTMLImageElement} img - 图片元素
+   * @param {string} imageUrl - 图片URL
+   * @param {number} index - 索引
+   */
+  loadHistoryImageDirect(img, imageUrl, index) {
+    // 设置加载超时
+    const loadTimeout = setTimeout(() => {
+      if (!img.complete) {
+        img.src = this.getPlaceholderImage();
+        img.alt = '图片加载超时';
+        console.warn(`历史图片 ${index + 1} 加载超时:`, imageUrl);
+      }
+    }, 3000);
+
+    img.onload = () => {
+      clearTimeout(loadTimeout);
+      img.style.backgroundColor = 'transparent';
+      
+      // 异步缓存图片
+      setTimeout(() => {
+        this.imageCache?.set(imageUrl, img).catch(error => {
+          console.warn('缓存历史图片失败:', error);
+        });
+      }, 100);
+      
+      console.log(`历史图片 ${index + 1} 加载完成:`, imageUrl);
+    };
+    
+    img.onerror = () => {
+      clearTimeout(loadTimeout);
+      img.src = this.getPlaceholderImage();
+      img.alt = '图片加载失败';
+      console.warn(`历史图片 ${index + 1} 加载失败:`, imageUrl);
+    };
+
+    img.src = imageUrl;
+  }
+
+  /**
+   * 获取占位符图片
+   * @returns {string} 占位符图片的Data URL
+   */
+  getPlaceholderImage() {
+    return 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iODAiIGhlaWdodD0iODAiIHZpZXdCb3g9IjAgMCA4MCA4MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjgwIiBoZWlnaHQ9IjgwIiBmaWxsPSIjZjBmMGYwIi8+CjxwYXRoIGQ9Ik00MCAyMEM0Ni42Mjc0IDIwIDUyIDI1LjM3MjYgNTIgMzJDNTIgMzguNjI3NCA0Ni42Mjc0IDQ0IDQwIDQ0QzMzLjM3MjYgNDQgMjggMzguNjI3NCAyOCAzMkMyOCAyNS4zNzI2IDMzLjM3MjYgMjAgNDAgMjBaIiBmaWxsPSIjY2NjIi8+CjxwYXRoIGQ9Ik0yMCA1Nkw2MCA1NkM2MiA1NiA2MCA1NCA2MCA1Mkw2MCA0OEM2MCA0NiA1OCA0NCA1NiA0NEwyNCA0NEMyMiA0NCAyMCA0NiAyMCA0OEwyMCA1MkMyMCA1NCAyMiA1NiAyMCA1NloiIGZpbGw9IiNjY2MiLz4KPC9zdmc+';
+  }
+
+  /**
+   * 跳转到历史记录中的指定索引
+   * @param {number} index - 历史记录索引
+   */
+  jumpToHistoryIndex(index) {
+    if (index < 0 || index >= this.imageHistory.length) {
+      console.warn("无效的历史索引:", index);
+      return;
+    }
+
+    const targetUrl = this.imageHistory[index];
+    console.log(`跳转到历史记录 ${index + 1}:`, targetUrl);
+
+    // 更新当前历史索引
+    if (index === this.imageHistory.length - 1) {
+      this.currentHistoryIndex = -1; // 最新位置
+    } else {
+      this.currentHistoryIndex = index;
+    }
+
+    // 显示图片
+    this.currentImageUrl = targetUrl;
+    this.uiController.displayImage(targetUrl, this.responsiveManager);
+    
+    // 更新历史面板
+    this.updateHistoryPanel();
+    
+    // 显示反馈
+    this.uiController.showUserFeedback(`已跳转到第 ${index + 1} 张图片`, 1500);
+  }
+
+  /**
+   * 显示历史状态信息（调试用）
+   */
+  showHistoryStatus() {
+    const status = this.getHistoryStatus();
+    const message = `历史: ${status.length}/${status.maxSize} | 位置: ${status.currentIndex === -1 ? '最新' : status.currentIndex} | 可返回: ${status.canGoPrevious ? '是' : '否'} | 可前进: ${status.canGoNext ? '是' : '否'}`;
+    console.log("历史状态:", status);
+    this.uiController.showUserFeedback(message, 2000);
+  }
+
+  /**
+   * 获取历史记录状态
+   * @returns {Object} 历史记录状态信息
+   */
+  getHistoryStatus() {
+    return {
+      length: this.imageHistory.length,
+      maxSize: this.maxHistorySize,
+      currentIndex: this.currentHistoryIndex,
+      canGoPrevious: this.canGoPrevious(),
+      canGoNext: this.canGoNext(),
+      currentUrl: this.currentImageUrl,
+      history: this.imageHistory,
+    };
+  }
+
+  /**
    * 绑定帮助按钮事件
    */
   bindHelpButton() {
@@ -823,6 +1118,495 @@ export class ImageViewer {
   }
 
   /**
+   * 初始化用户引导功能
+   */
+  initializeUserGuideFeatures() {
+    if (!this.userGuideManager) return;
+
+    try {
+      const success = this.userGuideManager.initialize();
+      if (success) {
+        console.log("用户引导功能初始化成功");
+      }
+      this.addHelpKeyboardShortcut();
+    } catch (error) {
+      console.error("用户引导功能初始化失败:", error);
+    }
+  }
+
+  /**
+   * 添加键盘快捷键支持
+   */
+  addHelpKeyboardShortcut() {
+    const optimizedHelpKeyHandler = this.eventOptimizer?.throttle(
+      (event) => {
+        if (event.key === "F1") {
+          event.preventDefault();
+          this.handleHelpButtonClick();
+        }
+      },
+      500,
+      "help-shortcut"
+    );
+
+    if (optimizedHelpKeyHandler) {
+      document.addEventListener("keydown", optimizedHelpKeyHandler);
+      console.log("帮助快捷键已绑定 (F1)");
+    }
+  }
+
+  /**
+   * 获取下一张历史图片
+   * @returns {string|null} 下一张图片URL或null
+   */
+  getNextFromHistory() {
+    if (this.currentHistoryIndex === -1) {
+      return null; // 已经在最新位置
+    }
+
+    this.currentHistoryIndex++;
+    if (this.currentHistoryIndex >= this.imageHistory.length - 1) {
+      this.currentHistoryIndex = -1; // 回到最新位置
+      return null;
+    }
+
+    const nextUrl = this.imageHistory[this.currentHistoryIndex];
+    console.log("从历史记录前进到下一张:", nextUrl, "索引:", this.currentHistoryIndex);
+    return nextUrl;
+  }
+
+  /**
+   * 检查是否可以前进到下一张
+   * @returns {boolean} 是否可以前进
+   */
+  canGoNext() {
+    if (this.currentHistoryIndex === -1) {
+      return true; // 在最新位置，总是可以获取新图片
+    }
+    
+    return this.currentHistoryIndex < this.imageHistory.length - 1;
+  }
+
+  /**
+   * 显示历史图片（带动画）
+   * @param {string} imageUrl - 历史图片URL
+   * @param {string} direction - 动画方向
+   */
+  async displayHistoryImage(imageUrl, direction) {
+    try {
+      console.log(`显示历史图片: ${imageUrl}, 方向: ${direction}`);
+
+      // 获取当前图片元素
+      const currentImg = this.uiController.imageContainer?.querySelector("img");
+
+      // 检查缓存
+      let cachedImage = this.imageCache?.get(imageUrl);
+      let newImg;
+
+      if (cachedImage) {
+        console.log("使用缓存的历史图片:", imageUrl);
+        if (this.performanceMonitor) {
+          this.performanceMonitor.recordCacheHit(true);
+        }
+
+        // 克隆缓存的图片
+        newImg = cachedImage.cloneNode();
+
+        // 调整图片尺寸
+        if (this.responsiveManager) {
+          this.responsiveManager.adjustImageSize(newImg);
+        }
+      } else {
+        console.log("历史图片缓存未命中，重新加载:", imageUrl);
+        if (this.performanceMonitor) {
+          this.performanceMonitor.recordCacheHit(false);
+        }
+
+        // 预加载历史图片
+        newImg = await this.preloadImageForAnimation(imageUrl);
+
+        // 缓存历史图片
+        try {
+          await this.imageCache?.set(imageUrl, newImg);
+        } catch (cacheError) {
+          console.warn("历史图片缓存失败:", cacheError);
+        }
+      }
+
+      // 执行动画切换
+      if (this.animationController) {
+        await this.executeImageSwitchAnimation(currentImg, newImg, direction);
+      } else {
+        // 简单切换
+        this.uiController.clearImage();
+        if (this.uiController.imageContainer) {
+          this.uiController.imageContainer.appendChild(newImg);
+        }
+      }
+
+      // 更新当前图片URL
+      this.currentImageUrl = imageUrl;
+
+      // 隐藏加载状态
+      this.uiController.hideLoading();
+      this.uiController.hideError();
+
+      // 更新历史面板（如果已打开）
+      const historyPanel = document.getElementById('history-panel');
+      if (historyPanel && historyPanel.classList.contains('open')) {
+        this.updateHistoryPanel();
+      }
+
+      console.log("历史图片显示完成:", imageUrl);
+    } catch (error) {
+      console.error("显示历史图片失败:", error);
+      this.uiController.showUserFeedback("图片显示失败，请重试", 1000);
+    }
+  }
+
+  /**
+   * 预加载图片用于动画
+   * @param {string} imageUrl - 图片URL
+   * @returns {Promise<HTMLImageElement>} 加载完成的图片元素
+   */
+  async preloadImageForAnimation(imageUrl) {
+    return new Promise((resolve, reject) => {
+      const img = document.createElement("img");
+
+      img.onload = () => {
+        console.log("动画图片预加载成功:", imageUrl);
+
+        // 调整图片尺寸
+        if (this.responsiveManager) {
+          this.responsiveManager.adjustImageSize(img);
+        }
+
+        resolve(img);
+      };
+
+      img.onerror = () => {
+        console.error("动画图片预加载失败:", imageUrl);
+        reject(new Error("图片资源加载失败，可能图片已损坏或不存在"));
+      };
+
+      // 设置图片属性
+      img.src = imageUrl;
+      img.alt = "H5 图片展示";
+    });
+  }
+
+  /**
+   * 执行图片切换动画
+   * @param {HTMLElement} currentImg - 当前图片元素
+   * @param {HTMLElement} newImg - 新图片元素
+   * @param {string} direction - 动画方向
+   */
+  async executeImageSwitchAnimation(currentImg, newImg, direction) {
+    try {
+      console.log(`执行图片切换动画，方向: ${direction}`);
+
+      // 如果没有当前图片，直接显示新图片
+      if (!currentImg) {
+        console.log("没有当前图片，直接显示新图片");
+        if (this.uiController.imageContainer) {
+          this.uiController.imageContainer.appendChild(newImg);
+        }
+
+        // 添加简单的显示动画
+        newImg.style.opacity = "0";
+        newImg.style.transform = "scale(0.95)";
+        newImg.style.transition = "opacity 0.3s ease, transform 0.3s ease";
+
+        setTimeout(() => {
+          newImg.style.opacity = "1";
+          newImg.style.transform = "scale(1)";
+        }, 50);
+
+        return;
+      }
+
+      // 设置新图片的初始样式
+      newImg.style.position = "absolute";
+      newImg.style.top = "0";
+      newImg.style.left = "0";
+      newImg.style.opacity = "1";
+
+      // 添加新图片到容器
+      if (this.uiController.imageContainer) {
+        this.uiController.imageContainer.appendChild(newImg);
+      }
+
+      // 执行滑动动画
+      if (this.animationController) {
+        await this.animationController.slideAnimation(currentImg, newImg, direction);
+      }
+
+      // 动画完成后清理旧图片
+      if (currentImg && currentImg.parentNode) {
+        currentImg.remove();
+      }
+
+      // 重置新图片样式
+      newImg.style.position = "";
+      newImg.style.top = "";
+      newImg.style.left = "";
+      newImg.style.transform = "";
+      newImg.style.transition = "";
+
+      console.log("图片切换动画执行完成");
+    } catch (error) {
+      console.error("图片切换动画执行失败:", error);
+
+      // 动画失败时的回退处理
+      this.handleAnimationFallback(currentImg, newImg);
+
+      throw error;
+    }
+  }
+
+  /**
+   * 处理动画失败的回退
+   * @param {HTMLElement} currentImg - 当前图片元素
+   * @param {HTMLElement} newImg - 新图片元素
+   */
+  handleAnimationFallback(currentImg, newImg) {
+    console.log("执行动画失败回退处理");
+
+    try {
+      // 清除当前图片
+      if (currentImg && currentImg.parentNode) {
+        currentImg.remove();
+      }
+
+      // 确保新图片在容器中
+      if (newImg && !newImg.parentNode && this.uiController.imageContainer) {
+        this.uiController.imageContainer.appendChild(newImg);
+      }
+
+      // 重置新图片样式
+      if (newImg) {
+        newImg.style.position = "";
+        newImg.style.top = "";
+        newImg.style.left = "";
+        newImg.style.transform = "";
+        newImg.style.transition = "";
+        newImg.style.opacity = "1";
+      }
+    } catch (fallbackError) {
+      console.error("动画回退处理也失败了:", fallbackError);
+    }
+  }
+
+  /**
+   * 带动画的图片加载
+   * @param {string} direction - 动画方向
+   */
+  async loadImageWithAnimation(direction) {
+    const startTime = performance.now();
+
+    try {
+      console.log(`开始带动画的图片加载，方向: ${direction}`);
+
+      // 检查网络连接
+      if (!this.apiService.isOnline()) {
+        throw new Error("网络连接不可用，请检查网络设置");
+      }
+
+      // 获取当前图片元素
+      const currentImg = this.uiController.imageContainer?.querySelector("img");
+
+      // 显示加载状态（但不清除当前图片）
+      this.uiController.showLoading();
+
+      // 获取新图片URL
+      const apiStartTime = performance.now();
+      const imageUrl = await this.apiService.fetchImage();
+      const apiEndTime = performance.now();
+
+      // 记录API调用时间
+      if (this.performanceMonitor) {
+        this.performanceMonitor.recordApiCallTime(apiStartTime, apiEndTime, true);
+      }
+
+      // 检查缓存
+      let cachedImage = this.imageCache?.get(imageUrl);
+      let newImg;
+
+      if (cachedImage) {
+        console.log("使用缓存图片进行动画切换:", imageUrl);
+        if (this.performanceMonitor) {
+          this.performanceMonitor.recordCacheHit(true);
+        }
+
+        // 克隆缓存的图片
+        newImg = cachedImage.cloneNode();
+
+        // 调整图片尺寸
+        if (this.responsiveManager) {
+          this.responsiveManager.adjustImageSize(newImg);
+        }
+
+        // 执行动画切换
+        await this.executeImageSwitchAnimation(currentImg, newImg, direction);
+      } else {
+        console.log("缓存未命中，加载新图片并执行动画:", imageUrl);
+        if (this.performanceMonitor) {
+          this.performanceMonitor.recordCacheHit(false);
+        }
+
+        // 预加载新图片
+        newImg = await this.preloadImageForAnimation(imageUrl);
+
+        // 缓存新图片
+        try {
+          await this.imageCache?.set(imageUrl, newImg);
+        } catch (cacheError) {
+          console.warn("图片缓存失败:", cacheError);
+        }
+
+        // 执行动画切换
+        await this.executeImageSwitchAnimation(currentImg, newImg, direction);
+      }
+
+      // 隐藏加载状态
+      this.uiController.hideLoading();
+      this.uiController.hideError();
+
+      // 记录内存使用情况
+      if (this.performanceMonitor) {
+        this.performanceMonitor.recordMemoryUsage(
+          this.imageCache?.getStats()?.memoryUsage || 0
+        );
+      }
+
+      // 触发智能预加载
+      if (this.preloadStrategy) {
+        this.preloadStrategy.smartPreload(imageUrl);
+      }
+
+      // 触发图片加载完成后的自动预加载
+      if (this.preloadStrategy) {
+        await this.preloadStrategy.preloadOnImageLoad(imageUrl);
+      }
+
+      // 更新当前图片URL
+      this.currentImageUrl = imageUrl;
+
+      const endTime = performance.now();
+      console.log(`带动画的图片加载完成，总耗时: ${(endTime - startTime).toFixed(2)}ms`);
+    } catch (error) {
+      const endTime = performance.now();
+      console.error("带动画的图片加载失败:", error);
+
+      // 记录错误和失败的API调用
+      if (this.performanceMonitor) {
+        this.performanceMonitor.recordError(error, "loadImageWithAnimation");
+        this.performanceMonitor.recordApiCallTime(startTime, endTime, false);
+      }
+
+      // 如果动画加载失败，回退到普通加载
+      console.log("回退到普通图片加载");
+      this.loadImage();
+    }
+  }
+
+  /**
+   * 获取当前显示的图片URL
+   * @returns {string|null} 当前图片URL或null
+   */
+  getCurrentImageUrl() {
+    return this.uiController.getCurrentImageUrl();
+  }
+
+  /**
+   * 刷新当前图片
+   */
+  refreshImage() {
+    console.log("刷新图片");
+    this.loadImage();
+  }
+
+  /**
+   * 获取性能报告
+   * @returns {Object} 性能统计报告
+   */
+  getPerformanceReport() {
+    return this.performanceMonitor?.getPerformanceReport() || {};
+  }
+
+  /**
+   * 获取缓存统计信息
+   * @returns {Object} 缓存统计
+   */
+  getCacheStats() {
+    return this.imageCache?.getStats() || {};
+  }
+
+  /**
+   * 清理缓存
+   */
+  clearCache() {
+    if (this.imageCache) {
+      this.imageCache.clear();
+      console.log("图片缓存已清理");
+    }
+  }
+
+  /**
+   * 输出性能报告到控制台
+   */
+  logPerformanceReport() {
+    if (this.performanceMonitor) {
+      this.performanceMonitor.logPerformanceReport();
+    }
+
+    const cacheStats = this.getCacheStats();
+    console.group("📦 缓存统计");
+    console.log("缓存数量:", (cacheStats.cacheSize || 0) + "/" + (cacheStats.maxCacheSize || 0));
+    console.log("内存使用:", (cacheStats.memoryUsagePercent || 0) + "%");
+    console.log("内存占用:", ((cacheStats.memoryUsage || 0) / 1024 / 1024).toFixed(2) + "MB");
+    console.groupEnd();
+  }
+
+  /**
+   * 销毁图片查看器，清理资源
+   */
+  destroy() {
+    if (this.imageCache) {
+      this.imageCache.clear();
+    }
+
+    if (this.preloadStrategy) {
+      this.preloadStrategy.cleanup();
+    }
+
+    if (this.performanceMonitor) {
+      this.performanceMonitor.cleanup();
+    }
+
+    if (this.eventOptimizer) {
+      this.eventOptimizer.cleanup();
+    }
+
+    if (this.userGuideManager) {
+      this.userGuideManager.destroy();
+    }
+
+    if (this.animationController) {
+      this.animationController.destroy();
+    }
+
+    if (this.uiController) {
+      this.uiController.destroy();
+    }
+
+    if (this.responsiveManager) {
+      this.responsiveManager.destroy();
+    }
+
+    console.log("ImageViewer 已销毁");
+  }
+}
    * 初始化用户引导功能
    */
   initializeUserGuideFeatures() {

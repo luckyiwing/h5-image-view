@@ -2,10 +2,10 @@
  * 主应用类模块
  */
 
-import { APP_CONFIG } from '../config/app-config.js';
-import { ApiService } from '../services/api-service.js';
-import { UIController } from '../controllers/ui-controller.js';
-import { ImageViewer } from './image-viewer.js';
+import { APP_CONFIG } from "../config/app-config.js";
+import { ApiService } from "../services/api-service.js";
+import { UIController } from "../controllers/ui-controller.js";
+import { ImageViewer } from "./image-viewer.js";
 
 /**
  * 主应用类 - 整合所有功能模块并管理应用生命周期
@@ -220,10 +220,12 @@ export class H5ImageViewerApp {
       window.location.reload();
     });
 
-    document.getElementById("fallback-continue").addEventListener("click", () => {
-      document.getElementById("fallback-mode").remove();
-      this.initializeBasicMode();
-    });
+    document
+      .getElementById("fallback-continue")
+      .addEventListener("click", () => {
+        document.getElementById("fallback-mode").remove();
+        this.initializeBasicMode();
+      });
   }
 
   /**
@@ -383,12 +385,16 @@ export class H5ImageViewerApp {
    * 设置便捷的属性访问器
    */
   setupPropertyAccessors() {
+    // 直接暴露到应用实例的顶层，便于全局函数访问
     this.apiService = this.state.modules.apiService;
     this.uiController = this.state.modules.uiController;
     this.imageViewer = this.state.modules.imageViewer;
     this.responsiveManager = this.state.modules.responsiveManager;
 
+    // 为了兼容性，也保持 state.modules 的访问方式
+    // 这样旧的访问路径仍然有效
     console.log("属性访问器已设置");
+    console.log("ImageViewer实例:", this.imageViewer ? "已创建" : "未创建");
   }
 
   /**
@@ -451,7 +457,10 @@ export class H5ImageViewerApp {
         lastError: this.state.lastError,
         timestamp: Date.now(),
       };
-      localStorage.setItem("h5-image-viewer-state", JSON.stringify(stateToSave));
+      localStorage.setItem(
+        "h5-image-viewer-state",
+        JSON.stringify(stateToSave)
+      );
     } catch (error) {
       console.warn("无法保存状态到localStorage:", error);
     }
@@ -517,7 +526,9 @@ export class H5ImageViewerApp {
       const limitMB = Math.round(memory.jsHeapSizeLimit / 1024 / 1024);
       const usagePercent = (usedMB / limitMB) * 100;
 
-      console.log(`内存使用: ${usedMB}MB / ${limitMB}MB (${usagePercent.toFixed(1)}%)`);
+      console.log(
+        `内存使用: ${usedMB}MB / ${limitMB}MB (${usagePercent.toFixed(1)}%)`
+      );
 
       if (usagePercent > 80) {
         console.warn("内存使用过高，执行清理");
